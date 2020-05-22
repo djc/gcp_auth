@@ -1,5 +1,14 @@
 # GCP Auth
-[![crates.io](https://img.shields.io/crates/v/gcp_auth.svg)](https://crates.io/crates/gcp_auth)
+[![Crates.io][crates-badge]][crates-url]
+[![Documentation][docs-badge]][docs-url]
+[![MIT licensed][mit-badge]][mit-url]
+
+[crates-badge]: https://img.shields.io/crates/v/gcp_auth.svg
+[crates-url]: https://crates.io/crates/gcp_auth
+[docs-badge]: https://docs.rs/gcp_auth/badge.svg
+[docs-url]: https://docs.rs/gcp_auth
+[mit-badge]: https://img.shields.io/badge/license-MIT-blue.svg
+[mit-url]: LICENSE
 
 GCP Auth is a simple, minimal authentication library for Google Cloud Platform (GCP) providing authentication using
 services accounts that are used to issues Bearer tokens that can be used to authenticate against GCP services.
