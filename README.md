@@ -27,7 +27,7 @@ When running inside GCP the library can be asked directly without any further co
 for the current service account of the service.
 
 ```rust
-let authentication_manager = gcp_auth::init();
+let authentication_manager = gcp_auth::init().await?;
 let token = authentication_manager.get_token().await?;
 ```
 
@@ -39,9 +39,9 @@ has to be downloaded in IAM service for the service account you intend to use. T
 be available to the application at run time. The path to the configuration file is specified by 
 `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
 
-```no_run
-# GOOGLE_APPLICATION_CREDENTIALS environtment variable is set-up
-let authentication_manager = gcp_auth::init();
+```rust
+// GOOGLE_APPLICATION_CREDENTIALS environtment variable is set-up
+let authentication_manager = gcp_auth::init().await?;
 let token = authentication_manager.get_token().await?;
 ```
 
