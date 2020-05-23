@@ -19,7 +19,7 @@ impl AuthenticationManager {
     /// Requests Bearer token for the provided scope
     /// 
     /// Token can be used in the request authorization header in format "Bearer {token}"
-    pub async fn get_token(&self, scopes: &[&str]) -> BoxResult<Token> {
+    pub async fn get_token(&self, scopes: &[&str]) -> Result<Token, GCPAuthError> {
         let mut sa = self.service_account.lock().await;
         let mut token = sa.get_token(scopes);
         if token.is_none() {

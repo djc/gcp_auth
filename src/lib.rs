@@ -48,7 +48,7 @@ mod default_service_account;
 mod custom_service_account;
 mod prelude {
     pub(crate) use {
-        crate::error::BoxResult, crate::types::HyperClient, crate::types::Token,
+        crate::types::HyperClient, crate::types::Token,
         serde::Deserialize, serde::Serialize, std::collections::HashMap,
         std::path::Path, crate::error::GCPAuthError, hyper::Request, bytes::buf::Buf, async_trait::async_trait
     };

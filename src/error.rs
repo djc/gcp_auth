@@ -1,6 +1,4 @@
 use thiserror::Error;
-pub(crate) type BoxResult<T> = Result<T, Box<dyn std::error::Error>>;
-
 /// Enumerates all possible errors returned by this library.
 #[derive(Error, Debug)]
 pub enum GCPAuthError {
