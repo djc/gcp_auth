@@ -47,11 +47,12 @@ mod types;
 mod default_service_account;
 mod default_authorized_user;
 mod custom_service_account;
+mod util;
 mod prelude {
     pub(crate) use {
         crate::types::HyperClient, crate::types::Token,
         serde::Deserialize, serde::Serialize, std::collections::HashMap,
-        std::path::Path, crate::error::GCPAuthError, hyper::Request, bytes::buf::Buf, async_trait::async_trait
+        std::path::Path, crate::error::GCPAuthError, hyper::Request, async_trait::async_trait, crate::util::HyperExt
     };
 }
 pub use authentication_manager::AuthenticationManager;

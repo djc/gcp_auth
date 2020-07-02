@@ -58,19 +58,17 @@ pub enum GCPAuthError {
     #[error("User profile was not parsable")]
     UserProfileFormat(serde_json::error::Error),
 
-    /// Could not connect to metadata server
-    /// 
-    /// Metadata server is available only on GCP services
-    #[error("Could not establish connection with GCP Instace Metadata server")]
-    MetadataConnectionError(hyper::error::Error),
+    /// Could not connect to  server
+    #[error("Could not establish connection with server")]
+    ConnectionError(hyper::error::Error),
 
-    /// Could not parse response from metadata server
-    #[error("Could not parse GCP Instance Metadata server reponse")]
-    MetadataParsingError(serde_json::error::Error),
+    /// Could not parse response from server
+    #[error("Could not parse server reponse")]
+    ParsingError(serde_json::error::Error),
 
-    /// Could not connect to metadata server
-    #[error("GCP Instance Metadata server unavailable")]
-    MetadataServerUnavailable,
+    /// Could not connect to server
+    #[error("Server unavailable")]
+    ServerUnavailable,
 
     /// Could not determine signer scheme
     #[error("Couldn't choose signing scheme")]

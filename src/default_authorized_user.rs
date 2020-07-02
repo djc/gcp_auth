@@ -3,7 +3,6 @@ use tokio::fs;
 use hyper::body::Body;
 use hyper::Method;
 use crate::authentication_manager::ServiceAccount;
-use futures::stream::StreamExt;
 
 #[derive(Debug)]
 pub struct DefaultAuthorizedUser {
@@ -37,17 +36,8 @@ impl DefaultAuthorizedUser {
             grant_type: "refresh_token".to_string(),
             refresh_token: cred.refresh_token,
         });
-        let mut resp = client.request(req).await.map_err(GCPAuthError::OAuthConnectionError)?;
-        if resp.status().is_success() {
-            let body = resp.body_mut();
-            let mut data = Vec::new();
-            while let Some(chunk) = body.next().await {
-                data.extend(&chunk.map_err(GCPAuthError::OAuthConnectionError)?);
-            }
-            let token = serde_json::from_slice(&data).map_err(GCPAuthError::OAuthParsingError)?;
-            return Ok(token);
-        }
-        Err(GCPAuthError::MetadataServerUnavailable)
+        let token = client.request(req).await.map_err(GCPAuthError::OAuthConnectionError)?.deserialize().await?;
+        Ok(token)
     }
 }
 

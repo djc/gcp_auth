@@ -27,14 +27,8 @@ impl DefaultServiceAccount {
     async fn get_token(client: &HyperClient) -> Result<Token, GCPAuthError> {
         log::debug!("Getting token from GCP instance metadata server");
         let req = Self::build_token_request();
-        let resp = client.request(req).await.map_err(GCPAuthError::MetadataConnectionError)?;
-        if resp.status().is_success() {
-            let body = hyper::body::aggregate(resp).await.map_err(GCPAuthError::MetadataConnectionError)?;
-            let bytes = body.bytes();
-            let token = serde_json::from_slice(bytes).map_err(GCPAuthError::MetadataParsingError)?;
-            return Ok(token);
-        }
-        Err(GCPAuthError::MetadataServerUnavailable)
+        let token = client.request(req).await.map_err(GCPAuthError::ConnectionError)?.deserialize().await?;
+        Ok(token)
     }
 }
 

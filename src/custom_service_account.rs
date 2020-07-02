@@ -54,10 +54,7 @@ impl ServiceAccount for CustomServiceAccount {
             .body(hyper::Body::from(rqbody))
             .unwrap();
         log::debug!("requesting token from service account: {:?}", request);
-        let (head, body) = client.request(request).await.map_err(GCPAuthError::OAuthConnectionError)?.into_parts();
-        let body = hyper::body::to_bytes(body).await.map_err(GCPAuthError::OAuthConnectionError)?;
-        log::debug!("received response; head: {:?}, body: {:?}", head, body);
-        let token: Token = serde_json::from_slice(&body).map_err(GCPAuthError::OAuthParsingError)?;
+        let token = client.request(request).await.map_err(GCPAuthError::OAuthConnectionError)?.deserialize().await?;
         let key = scopes.iter().map(|x| (*x).to_string()).collect();
         self.tokens.insert(key, token);
         Ok(())
