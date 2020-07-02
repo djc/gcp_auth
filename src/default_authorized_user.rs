@@ -3,14 +3,16 @@ use tokio::fs;
 use hyper::body::Body;
 use hyper::Method;
 use crate::authentication_manager::ServiceAccount;
+use futures::stream::StreamExt;
 
+#[derive(Debug)]
 pub struct DefaultAuthorizedUser {
     token: Token,
 }
 
 impl DefaultAuthorizedUser {
     const DEFAULT_TOKEN_GCP_URI: &'static str = "https://accounts.google.com/o/oauth2/token";
-    const USER_CREDENTIALS_PATH: &'static str = "~/.config/gcloud/application_default_credentials.json";
+    const USER_CREDENTIALS_PATH: &'static str = "/.config/gcloud/application_default_credentials.json";
     
     pub async fn new(client: &HyperClient) -> Result<Self, GCPAuthError> {
         let token = Self::get_token(client).await?;
@@ -27,18 +29,22 @@ impl DefaultAuthorizedUser {
 
     async fn get_token(client: &HyperClient) -> Result<Token, GCPAuthError> {
         log::debug!("Loading user credentials file");
-        let cred = UserCredentials::from_file(Self::USER_CREDENTIALS_PATH).await?;
+        let home = dirs::home_dir().ok_or(GCPAuthError::NoHomeDir)?;
+        let cred = UserCredentials::from_file(home.display().to_string() + Self::USER_CREDENTIALS_PATH).await?;
         let req = Self::build_token_request(&RerfeshRequest {
             client_id: cred.client_id,
             client_secret: cred.client_secret,
             grant_type: "refresh_token".to_string(),
             refresh_token: cred.refresh_token,
         });
-        let resp = client.request(req).await.map_err(GCPAuthError::OAuthConnectionError)?;
+        let mut resp = client.request(req).await.map_err(GCPAuthError::OAuthConnectionError)?;
         if resp.status().is_success() {
-            let body = hyper::body::aggregate(resp).await.map_err(GCPAuthError::OAuthConnectionError)?;
-            let bytes = body.bytes();
-            let token = serde_json::from_slice(bytes).map_err(GCPAuthError::OAuthParsingError)?;
+            let body = resp.body_mut();
+            let mut data = Vec::new();
+            while let Some(chunk) = body.next().await {
+                data.extend(&chunk.map_err(GCPAuthError::OAuthConnectionError)?);
+            }
+            let token = serde_json::from_slice(&data).map_err(GCPAuthError::OAuthParsingError)?;
             return Ok(token);
         }
         Err(GCPAuthError::MetadataServerUnavailable)

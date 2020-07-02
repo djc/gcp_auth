@@ -90,5 +90,5 @@ pub async fn init() -> Result<AuthenticationManager, GCPAuthError> {
             service_account: Mutex::new(Box::new(user_account)),
         });
     }
-    Err(GCPAuthError::NoAuthMethod(Box::new(custom.unwrap_err()), Box::new(default.unwrap_err())))
+    Err(GCPAuthError::NoAuthMethod(Box::new(custom.unwrap_err()), Box::new(default.unwrap_err()), Box::new(user.unwrap_err())))
 }

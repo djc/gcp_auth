@@ -12,7 +12,7 @@ pub enum GCPAuthError {
     /// All authentication methods have been tested and none succeeded.
     /// Service account file can be donwloaded from GCP in json format.
     #[error("No available authentication method was discovered")]
-    NoAuthMethod(Box<GCPAuthError>, Box<GCPAuthError>),
+    NoAuthMethod(Box<GCPAuthError>, Box<GCPAuthError>, Box<GCPAuthError>),
 
     /// Error in underlaying RustTLS library.
     /// Might signal problem with establishin secure connection using trusted certificates
@@ -79,6 +79,10 @@ pub enum GCPAuthError {
     /// Could not initalize signer
     #[error("Couldn't initialize signer")]
     SignerInit,
+
+    /// Could not find Home directory in the environment
+    #[error("Home directory not found")]
+    NoHomeDir,
 
     /// Represents all other cases of `std::io::Error`.
     #[error(transparent)]
