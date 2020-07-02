@@ -45,6 +45,7 @@ mod authentication_manager;
 mod jwt;
 mod types;
 mod default_service_account;
+mod default_authorized_user;
 mod custom_service_account;
 mod prelude {
     pub(crate) use {
@@ -67,6 +68,7 @@ use tokio::sync::Mutex;
 pub async fn init() -> Result<AuthenticationManager, GCPAuthError> {
     let https = HttpsConnector::new();
     let client = Client::builder().build::<_, hyper::Body>(https);
+
     let default = default_service_account::DefaultServiceAccount::new(&client).await;
     if let Ok(service_account) = default {
         return Ok(AuthenticationManager {
@@ -79,6 +81,13 @@ pub async fn init() -> Result<AuthenticationManager, GCPAuthError> {
         return Ok(AuthenticationManager {
             client,
             service_account: Mutex::new(Box::new(service_account)),
+        });
+    }
+    let user = default_authorized_user::DefaultAuthorizedUser::new(&client).await;
+    if let Ok(user_account) = user {
+        return Ok(AuthenticationManager {
+            client,
+            service_account: Mutex::new(Box::new(user_account)),
         });
     }
     Err(GCPAuthError::NoAuthMethod(Box::new(custom.unwrap_err()), Box::new(default.unwrap_err())))

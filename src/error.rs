@@ -47,6 +47,17 @@ pub enum GCPAuthError {
     #[error("Application profile provided in `GOOGLE_APPLICATION_CREDENTIALS` was not parsable")]
     AplicationProfileFormat(serde_json::error::Error),
 
+    /// Default user profile not found
+    ///
+    /// User can authenticate locally during development using `gcloud auth login` which results in creating
+    /// `~/.config/gcloud/application_default_credentials.json` which couldn't be find on the machine
+    #[error("User authentication profile not found")]
+    UserProfilePath(std::io::Error),
+
+    /// Wrong format of user profile
+    #[error("User profile was not parsable")]
+    UserProfileFormat(serde_json::error::Error),
+
     /// Could not connect to metadata server
     /// 
     /// Metadata server is available only on GCP services
