@@ -2,12 +2,13 @@
 //! 
 //! The library can be used in two ways:
 //! 
-//! - Invoking the library inside GCP environment fetches the default service account for the service and
+//! 1. Invoking the library inside GCP environment fetches the default service account for the service and
 //! the application is authenticated using that particular account
-//! - Providing a path to service account JSON configuration file using GOOGLE_APPLICATION_CREDENTIALS environment
+//! 2. Providing a path to service account JSON configuration file using GOOGLE_APPLICATION_CREDENTIALS environment
 //! variable. The service account configuration file can be downloaded in the IAM service when displaying service account detail.
 //! The downloaded JSON file should be provided without any further modification.
-//! 
+//! 3. Local user authetincation for development purposes using `gcloud auth` application. 
+//!
 //! The tokens are single-use and as such they shouldn't be cached and for each use a new token should be requested.
 //! Library handles token caching for their lifetime and so it won't make a request if a token with appropriate scope
 //! is available.
@@ -35,6 +36,17 @@
 //! let authentication_manager = gcp_auth::init().await?;
 //! let token = authentication_manager.get_token().await?;
 //! ```
+//! # Local user authentication
+//! This authentication method allows developers to authenticate again GCP services when developign locally.
+//! The method is intended only for development. Credentials can be set-up using `gcloud auth` utility.
+//! Credentials are read from file `~/.config/gcloud/application_default_credentials.json`.
+//! 
+//! # FAQ
+//! 
+//! ## Does library support windows?
+//! 
+//! No
+
 
 #![deny(missing_docs)]
 #![deny(warnings)]

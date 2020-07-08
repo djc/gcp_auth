@@ -15,8 +15,9 @@ services accounts that are used to issues Bearer tokens that can be used to auth
 
 Library implements two authenticatiom methods:
 
-- Default service accounts - can be used inside GCP
-- Custom service account - provided using environenment variable
+1. Default service accounts - can be used inside GCP
+2. Custom service account - provided using environenment variable
+3. Local user authetincation - for development purposes only, using `gcloud auth` application
 
 Tokens should not be cached in the application and before every use a new token should be request. The GCP auth library decides
 if there is available token with appropriate scope or if a new token should be generated.
@@ -44,6 +45,17 @@ be available to the application at run time. The path to the configuration file 
 let authentication_manager = gcp_auth::init().await?;
 let token = authentication_manager.get_token().await?;
 ```
+
+## Local user authentication
+This authentication method allows developers to authenticate again GCP ices when developign locally.
+The method is intended only for development. Credentials can be set-up g `gcloud auth` utility.
+Credentials are read from file `~/.config/gcloud/ication_default_credentials.json`.
+
+## FAQ
+
+### Does library support windows?
+
+No
 
 # License
 Parts of implementatino have been sourced from [yup-oauth2](https://github.com/dermesser/yup-oauth2)
