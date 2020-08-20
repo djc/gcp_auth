@@ -84,8 +84,7 @@ pub(crate) struct JWTSigner {
 impl JWTSigner {
     pub fn new(private_key: &str) -> Result<Self, GCPAuthError> {
         let key = decode_rsa_key(private_key)?;
-        let signing_key = sign::RSASigningKey::new(&key)
-            .map_err(|_| GCPAuthError::SignerInit)?;
+        let signing_key = sign::RSASigningKey::new(&key).map_err(|_| GCPAuthError::SignerInit)?;
         let signer = signing_key
             .choose_scheme(&[rustls::SignatureScheme::RSA_PKCS1_SHA256])
             .ok_or_else(|| GCPAuthError::SignerSchemeError)?;

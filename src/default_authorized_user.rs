@@ -1,8 +1,8 @@
+use crate::authentication_manager::ServiceAccount;
 use crate::prelude::*;
-use tokio::fs;
 use hyper::body::Body;
 use hyper::Method;
-use crate::authentication_manager::ServiceAccount;
+use tokio::fs;
 
 #[derive(Debug)]
 pub struct DefaultAuthorizedUser {
@@ -11,8 +11,9 @@ pub struct DefaultAuthorizedUser {
 
 impl DefaultAuthorizedUser {
     const DEFAULT_TOKEN_GCP_URI: &'static str = "https://accounts.google.com/o/oauth2/token";
-    const USER_CREDENTIALS_PATH: &'static str = "/.config/gcloud/application_default_credentials.json";
-    
+    const USER_CREDENTIALS_PATH: &'static str =
+        "/.config/gcloud/application_default_credentials.json";
+
     pub async fn new(client: &HyperClient) -> Result<Self, GCPAuthError> {
         let token = Self::get_token(client).await?;
         Ok(Self { token })
@@ -23,20 +24,28 @@ impl DefaultAuthorizedUser {
             .method(Method::POST)
             .uri(Self::DEFAULT_TOKEN_GCP_URI)
             .header("content-type", "application/json")
-            .body(Body::from(serde_json::to_string(json).unwrap())).unwrap()
+            .body(Body::from(serde_json::to_string(json).unwrap()))
+            .unwrap()
     }
 
     async fn get_token(client: &HyperClient) -> Result<Token, GCPAuthError> {
         log::debug!("Loading user credentials file");
         let home = dirs::home_dir().ok_or(GCPAuthError::NoHomeDir)?;
-        let cred = UserCredentials::from_file(home.display().to_string() + Self::USER_CREDENTIALS_PATH).await?;
+        let cred =
+            UserCredentials::from_file(home.display().to_string() + Self::USER_CREDENTIALS_PATH)
+                .await?;
         let req = Self::build_token_request(&RerfeshRequest {
             client_id: cred.client_id,
             client_secret: cred.client_secret,
             grant_type: "refresh_token".to_string(),
             refresh_token: cred.refresh_token,
         });
-        let token = client.request(req).await.map_err(GCPAuthError::OAuthConnectionError)?.deserialize().await?;
+        let token = client
+            .request(req)
+            .await
+            .map_err(GCPAuthError::OAuthConnectionError)?
+            .deserialize()
+            .await?;
         Ok(token)
     }
 }
@@ -47,7 +56,11 @@ impl ServiceAccount for DefaultAuthorizedUser {
         Some(self.token.clone())
     }
 
-    async fn refresh_token(&mut self, client: &HyperClient, _scopes: &[&str]) -> Result<(), GCPAuthError> {
+    async fn refresh_token(
+        &mut self,
+        client: &HyperClient,
+        _scopes: &[&str],
+    ) -> Result<(), GCPAuthError> {
         let token = Self::get_token(client).await?;
         self.token = token;
         Ok(())
@@ -76,7 +89,9 @@ struct UserCredentials {
 
 impl UserCredentials {
     async fn from_file<T: AsRef<Path>>(path: T) -> Result<UserCredentials, GCPAuthError> {
-        let content = fs::read_to_string(path).await.map_err(GCPAuthError::UserProfilePath)?;
+        let content = fs::read_to_string(path)
+            .await
+            .map_err(GCPAuthError::UserProfilePath)?;
         Ok(serde_json::from_str(&content).map_err(GCPAuthError::UserProfileFormat)?)
     }
 }

@@ -1,5 +1,5 @@
-use crate::prelude::*;
 use crate::authentication_manager::ServiceAccount;
+use crate::prelude::*;
 use hyper::body::Body;
 use hyper::Method;
 
@@ -21,13 +21,19 @@ impl DefaultServiceAccount {
             .method(Method::GET)
             .uri(Self::DEFAULT_TOKEN_GCP_URI)
             .header("Metadata-Flavor", "Google")
-            .body(Body::empty()).unwrap()
+            .body(Body::empty())
+            .unwrap()
     }
 
     async fn get_token(client: &HyperClient) -> Result<Token, GCPAuthError> {
         log::debug!("Getting token from GCP instance metadata server");
         let req = Self::build_token_request();
-        let token = client.request(req).await.map_err(GCPAuthError::ConnectionError)?.deserialize().await?;
+        let token = client
+            .request(req)
+            .await
+            .map_err(GCPAuthError::ConnectionError)?
+            .deserialize()
+            .await?;
         Ok(token)
     }
 }
@@ -38,7 +44,11 @@ impl ServiceAccount for DefaultServiceAccount {
         Some(self.token.clone())
     }
 
-    async fn refresh_token(&mut self, client: &HyperClient, _scopes: &[&str]) -> Result<(), GCPAuthError> {
+    async fn refresh_token(
+        &mut self,
+        client: &HyperClient,
+        _scopes: &[&str],
+    ) -> Result<(), GCPAuthError> {
         let token = Self::get_token(client).await?;
         self.token = token;
         Ok(())

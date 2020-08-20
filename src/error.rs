@@ -3,12 +3,12 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum GCPAuthError {
     /// No available authentication method was discovered
-    /// 
+    ///
     /// Application can authenticate against GCP using:
-    /// 
+    ///
     /// - Defaul service account - available inside GCP platform using GCP Instance Metadata server
     /// - Service account file - provided using `GOOGLE_APPLICATION_CREDENTIALS` with path
-    /// 
+    ///
     /// All authentication methods have been tested and none succeeded.
     /// Service account file can be donwloaded from GCP in json format.
     #[error("No available authentication method was discovered")]
@@ -28,20 +28,20 @@ pub enum GCPAuthError {
     OAuthParsingError(serde_json::error::Error),
 
     /// Variable `GOOGLE_APPLICATION_CREDENTIALS` could not be found in the current environment
-    /// 
+    ///
     /// GOOGLE_APPLICATION_CREDENTIALS is used for providing path to json file with applications credentials.
     /// File can be donwoloaded in GCP Console when creating service account.
     #[error("Path to custom auth credentials was not provided in `GOOGLE_APPLICATION_CREDENTIALS` env variable")]
     AplicationProfileMissing,
 
     /// Wrong path to custom application profile credentials provided
-    /// 
+    ///
     /// Path has to be defined using `GOOGLE_APPLICATION_CREDENTIALS` environment variable
     #[error("Environment variable `GOOGLE_APPLICATION_CREDENTIALS` contains invalid path to application profile file")]
     AplicationProfilePath(std::io::Error),
 
     /// Wrong format of custom application profile
-    /// 
+    ///
     /// Application profile is downloaded from GCP console and is stored in filesystem on the server.
     /// Full path is passed to library by seeting `GOOGLE_APPLICATION_CREDENTIALS` variable with path as a value.
     #[error("Application profile provided in `GOOGLE_APPLICATION_CREDENTIALS` was not parsable")]
