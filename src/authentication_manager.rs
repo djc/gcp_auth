@@ -22,7 +22,8 @@ impl AuthenticationManager {
     pub async fn get_token(&self, scopes: &[&str]) -> Result<Token, GCPAuthError> {
         let mut sa = self.service_account.lock().await;
         let mut token = sa.get_token(scopes);
-        if token.is_none() {
+
+        if token.is_none() || token.clone().unwrap().has_expired() {
             sa.refresh_token(&self.client, scopes).await?;
             token = sa.get_token(scopes);
         }

@@ -35,9 +35,6 @@ impl DefaultServiceAccount {
 #[async_trait]
 impl ServiceAccount for DefaultServiceAccount {
     fn get_token(&self, _scopes: &[&str]) -> Option<Token> {
-        if self.token.has_expired() {
-            return None;
-        }
         Some(self.token.clone())
     }
 
