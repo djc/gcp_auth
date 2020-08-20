@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use serde::{Deserializer};
+use serde::Deserializer;
 use serde::{Deserialize, Serialize};
 
 /// Represents an access token. All access tokens are Bearer tokens.
@@ -17,7 +17,7 @@ pub struct Token {
 impl Token {
     pub(crate) fn has_expired(&self) -> bool {
         self.expires_at
-            .map(|expiration_time| expiration_time - chrono::Duration::minutes(1) <= Utc::now())
+            .map(|expiration_time| expiration_time - chrono::Duration::seconds(30) <= Utc::now())
             .unwrap_or(false)
     }
 

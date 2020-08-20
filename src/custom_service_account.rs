@@ -24,15 +24,8 @@ impl CustomServiceAccount {
 #[async_trait]
 impl ServiceAccount for CustomServiceAccount {
     fn get_token(&self, scopes: &[&str]) -> Option<Token> {
-        let key: Vec<_> = scopes.iter().map(|x| (*x).to_string()).collect();
-        let token = self
-            .tokens
-            .get(&key);
-        
-        if token.is_none() || token.unwrap().has_expired() {
-            return None;
-        }
-        Some(token.unwrap().clone())
+        let key: Vec<_> = scopes.iter().map(|x| x.to_string()).collect();
+        self.tokens.get(&key).cloned()
     }
 
     async fn refresh_token(&mut self, client: &HyperClient, scopes: &[&str]) -> Result<(), GCPAuthError> {
