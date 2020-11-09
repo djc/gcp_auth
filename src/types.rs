@@ -25,6 +25,11 @@ impl Token {
     pub fn as_str(&self) -> &str {
         &self.access_token
     }
+
+    /// Get expiry of token, if available
+    pub fn expires_at(&self) -> Option<DateTime<Utc>> {
+        self.expires_at
+    }
 }
 
 fn deserialize_time<'de, D>(deserializer: D) -> Result<Option<DateTime<Utc>>, D::Error>
