@@ -71,7 +71,7 @@ pub use error::GCPAuthError;
 pub use types::Token;
 
 use hyper::Client;
-use hyper_tls::HttpsConnector;
+use hyper_rustls::HttpsConnector;
 use tokio::sync::Mutex;
 
 /// Initialize GCP authentication
