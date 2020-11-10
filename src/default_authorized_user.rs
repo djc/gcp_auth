@@ -2,11 +2,12 @@ use crate::authentication_manager::ServiceAccount;
 use crate::prelude::*;
 use hyper::body::Body;
 use hyper::Method;
+use std::sync::Mutex;
 use tokio::fs;
 
 #[derive(Debug)]
 pub struct DefaultAuthorizedUser {
-    token: Token,
+    token: Mutex<Token>,
 }
 
 impl DefaultAuthorizedUser {
@@ -15,7 +16,7 @@ impl DefaultAuthorizedUser {
         "/.config/gcloud/application_default_credentials.json";
 
     pub async fn new(client: &HyperClient) -> Result<Self, Error> {
-        let token = Self::get_token(client).await?;
+        let token = Mutex::new(Self::get_token(client).await?);
         Ok(Self { token })
     }
 
@@ -53,13 +54,13 @@ impl DefaultAuthorizedUser {
 #[async_trait]
 impl ServiceAccount for DefaultAuthorizedUser {
     fn get_token(&self, _scopes: &[&str]) -> Option<Token> {
-        Some(self.token.clone())
+        Some(self.token.lock().unwrap().clone())
     }
 
-    async fn refresh_token(&mut self, client: &HyperClient, _scopes: &[&str]) -> Result<(), Error> {
+    async fn refresh_token(&self, client: &HyperClient, _scopes: &[&str]) -> Result<Token, Error> {
         let token = Self::get_token(client).await?;
-        self.token = token;
-        Ok(())
+        *self.token.lock().unwrap() = token.clone();
+        Ok(token)
     }
 }
 

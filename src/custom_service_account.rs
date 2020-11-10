@@ -1,10 +1,11 @@
 use crate::authentication_manager::ServiceAccount;
 use crate::prelude::*;
+use std::sync::Mutex;
 use tokio::fs;
 
 #[derive(Debug)]
 pub struct CustomServiceAccount {
-    tokens: HashMap<Vec<String>, Token>,
+    tokens: Mutex<HashMap<Vec<String>, Token>>,
     credentials: ApplicationCredentials,
 }
 
@@ -17,7 +18,7 @@ impl CustomServiceAccount {
         let credentials = ApplicationCredentials::from_file(path).await?;
         Ok(Self {
             credentials,
-            tokens: HashMap::new(),
+            tokens: Mutex::new(HashMap::new()),
         })
     }
 }
@@ -26,10 +27,10 @@ impl CustomServiceAccount {
 impl ServiceAccount for CustomServiceAccount {
     fn get_token(&self, scopes: &[&str]) -> Option<Token> {
         let key: Vec<_> = scopes.iter().map(|x| x.to_string()).collect();
-        self.tokens.get(&key).cloned()
+        self.tokens.lock().unwrap().get(&key).cloned()
     }
 
-    async fn refresh_token(&mut self, client: &HyperClient, scopes: &[&str]) -> Result<(), Error> {
+    async fn refresh_token(&self, client: &HyperClient, scopes: &[&str]) -> Result<Token, Error> {
         use crate::jwt::Claims;
         use crate::jwt::JWTSigner;
         use crate::jwt::GRANT_TYPE;
@@ -52,11 +53,11 @@ impl ServiceAccount for CustomServiceAccount {
             .request(request)
             .await
             .map_err(Error::OAuthConnectionError)?
-            .deserialize()
+            .deserialize::<Token>()
             .await?;
         let key = scopes.iter().map(|x| (*x).to_string()).collect();
-        self.tokens.insert(key, token);
-        Ok(())
+        self.tokens.lock().unwrap().insert(key, token.clone());
+        Ok(token)
     }
 }
 
