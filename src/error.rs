@@ -1,7 +1,7 @@
 use thiserror::Error;
 /// Enumerates all possible errors returned by this library.
 #[derive(Error, Debug)]
-pub enum GCPAuthError {
+pub enum Error {
     /// No available authentication method was discovered
     ///
     /// Application can authenticate against GCP using:
@@ -12,7 +12,7 @@ pub enum GCPAuthError {
     /// All authentication methods have been tested and none succeeded.
     /// Service account file can be donwloaded from GCP in json format.
     #[error("No available authentication method was discovered")]
-    NoAuthMethod(Box<GCPAuthError>, Box<GCPAuthError>, Box<GCPAuthError>),
+    NoAuthMethod(Box<Error>, Box<Error>, Box<Error>),
 
     /// Error in underlaying RustTLS library.
     /// Might signal problem with establishin secure connection using trusted certificates

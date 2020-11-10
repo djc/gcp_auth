@@ -4,11 +4,7 @@ use tokio::sync::Mutex;
 #[async_trait]
 pub trait ServiceAccount: Send {
     fn get_token(&self, scopes: &[&str]) -> Option<Token>;
-    async fn refresh_token(
-        &mut self,
-        client: &HyperClient,
-        scopes: &[&str],
-    ) -> Result<(), GCPAuthError>;
+    async fn refresh_token(&mut self, client: &HyperClient, scopes: &[&str]) -> Result<(), Error>;
 }
 
 /// Authentication manager is responsible for caching and obtaing credentials for the required scope
@@ -23,7 +19,7 @@ impl AuthenticationManager {
     /// Requests Bearer token for the provided scope
     ///
     /// Token can be used in the request authorization header in format "Bearer {token}"
-    pub async fn get_token(&self, scopes: &[&str]) -> Result<Token, GCPAuthError> {
+    pub async fn get_token(&self, scopes: &[&str]) -> Result<Token, Error> {
         let mut sa = self.service_account.lock().await;
         let mut token = sa.get_token(scopes);
 

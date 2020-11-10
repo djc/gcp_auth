@@ -61,13 +61,13 @@ mod types;
 mod util;
 mod prelude {
     pub(crate) use {
-        crate::error::GCPAuthError, crate::types::HyperClient, crate::types::Token,
-        crate::util::HyperExt, async_trait::async_trait, hyper::Request, serde::Deserialize,
-        serde::Serialize, std::collections::HashMap, std::path::Path,
+        crate::error::Error, crate::types::HyperClient, crate::types::Token, crate::util::HyperExt,
+        async_trait::async_trait, hyper::Request, serde::Deserialize, serde::Serialize,
+        std::collections::HashMap, std::path::Path,
     };
 }
 pub use authentication_manager::AuthenticationManager;
-pub use error::GCPAuthError;
+pub use error::Error;
 pub use types::Token;
 
 use hyper::Client;
@@ -77,7 +77,7 @@ use tokio::sync::Mutex;
 /// Initialize GCP authentication
 ///
 /// Returns `AuthenticationManager` which can be used to obtain tokens
-pub async fn init() -> Result<AuthenticationManager, GCPAuthError> {
+pub async fn init() -> Result<AuthenticationManager, Error> {
     let https = HttpsConnector::new();
     let client = Client::builder().build::<_, hyper::Body>(https);
 
@@ -102,7 +102,7 @@ pub async fn init() -> Result<AuthenticationManager, GCPAuthError> {
             service_account: Mutex::new(Box::new(user_account)),
         });
     }
-    Err(GCPAuthError::NoAuthMethod(
+    Err(Error::NoAuthMethod(
         Box::new(custom.unwrap_err()),
         Box::new(default.unwrap_err()),
         Box::new(user.unwrap_err()),

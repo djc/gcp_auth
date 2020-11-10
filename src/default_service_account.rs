@@ -11,7 +11,7 @@ pub struct DefaultServiceAccount {
 impl DefaultServiceAccount {
     const DEFAULT_TOKEN_GCP_URI: &'static str = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token";
 
-    pub async fn new(client: &HyperClient) -> Result<Self, GCPAuthError> {
+    pub async fn new(client: &HyperClient) -> Result<Self, Error> {
         let token = Self::get_token(client).await?;
         Ok(Self { token })
     }
@@ -25,13 +25,13 @@ impl DefaultServiceAccount {
             .unwrap()
     }
 
-    async fn get_token(client: &HyperClient) -> Result<Token, GCPAuthError> {
+    async fn get_token(client: &HyperClient) -> Result<Token, Error> {
         log::debug!("Getting token from GCP instance metadata server");
         let req = Self::build_token_request();
         let token = client
             .request(req)
             .await
-            .map_err(GCPAuthError::ConnectionError)?
+            .map_err(Error::ConnectionError)?
             .deserialize()
             .await?;
         Ok(token)
@@ -44,11 +44,7 @@ impl ServiceAccount for DefaultServiceAccount {
         Some(self.token.clone())
     }
 
-    async fn refresh_token(
-        &mut self,
-        client: &HyperClient,
-        _scopes: &[&str],
-    ) -> Result<(), GCPAuthError> {
+    async fn refresh_token(&mut self, client: &HyperClient, _scopes: &[&str]) -> Result<(), Error> {
         let token = Self::get_token(client).await?;
         self.token = token;
         Ok(())

@@ -14,7 +14,7 @@ impl DefaultAuthorizedUser {
     const USER_CREDENTIALS_PATH: &'static str =
         "/.config/gcloud/application_default_credentials.json";
 
-    pub async fn new(client: &HyperClient) -> Result<Self, GCPAuthError> {
+    pub async fn new(client: &HyperClient) -> Result<Self, Error> {
         let token = Self::get_token(client).await?;
         Ok(Self { token })
     }
@@ -28,9 +28,9 @@ impl DefaultAuthorizedUser {
             .unwrap()
     }
 
-    async fn get_token(client: &HyperClient) -> Result<Token, GCPAuthError> {
+    async fn get_token(client: &HyperClient) -> Result<Token, Error> {
         log::debug!("Loading user credentials file");
-        let home = dirs::home_dir().ok_or(GCPAuthError::NoHomeDir)?;
+        let home = dirs::home_dir().ok_or(Error::NoHomeDir)?;
         let cred =
             UserCredentials::from_file(home.display().to_string() + Self::USER_CREDENTIALS_PATH)
                 .await?;
@@ -43,7 +43,7 @@ impl DefaultAuthorizedUser {
         let token = client
             .request(req)
             .await
-            .map_err(GCPAuthError::OAuthConnectionError)?
+            .map_err(Error::OAuthConnectionError)?
             .deserialize()
             .await?;
         Ok(token)
@@ -56,11 +56,7 @@ impl ServiceAccount for DefaultAuthorizedUser {
         Some(self.token.clone())
     }
 
-    async fn refresh_token(
-        &mut self,
-        client: &HyperClient,
-        _scopes: &[&str],
-    ) -> Result<(), GCPAuthError> {
+    async fn refresh_token(&mut self, client: &HyperClient, _scopes: &[&str]) -> Result<(), Error> {
         let token = Self::get_token(client).await?;
         self.token = token;
         Ok(())
@@ -88,10 +84,10 @@ struct UserCredentials {
 }
 
 impl UserCredentials {
-    async fn from_file<T: AsRef<Path>>(path: T) -> Result<UserCredentials, GCPAuthError> {
+    async fn from_file<T: AsRef<Path>>(path: T) -> Result<UserCredentials, Error> {
         let content = fs::read_to_string(path)
             .await
-            .map_err(GCPAuthError::UserProfilePath)?;
-        Ok(serde_json::from_str(&content).map_err(GCPAuthError::UserProfileFormat)?)
+            .map_err(Error::UserProfilePath)?;
+        Ok(serde_json::from_str(&content).map_err(Error::UserProfileFormat)?)
     }
 }

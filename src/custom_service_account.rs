@@ -11,9 +11,9 @@ pub struct CustomServiceAccount {
 impl CustomServiceAccount {
     const GOOGLE_APPLICATION_CREDENTIALS: &'static str = "GOOGLE_APPLICATION_CREDENTIALS";
 
-    pub async fn new() -> Result<Self, GCPAuthError> {
+    pub async fn new() -> Result<Self, Error> {
         let path = std::env::var(Self::GOOGLE_APPLICATION_CREDENTIALS)
-            .map_err(|_| GCPAuthError::AplicationProfileMissing)?;
+            .map_err(|_| Error::AplicationProfileMissing)?;
         let credentials = ApplicationCredentials::from_file(path).await?;
         Ok(Self {
             credentials,
@@ -29,11 +29,7 @@ impl ServiceAccount for CustomServiceAccount {
         self.tokens.get(&key).cloned()
     }
 
-    async fn refresh_token(
-        &mut self,
-        client: &HyperClient,
-        scopes: &[&str],
-    ) -> Result<(), GCPAuthError> {
+    async fn refresh_token(&mut self, client: &HyperClient, scopes: &[&str]) -> Result<(), Error> {
         use crate::jwt::Claims;
         use crate::jwt::JWTSigner;
         use crate::jwt::GRANT_TYPE;
@@ -43,9 +39,7 @@ impl ServiceAccount for CustomServiceAccount {
         let signer = JWTSigner::new(&self.credentials.private_key)?;
 
         let claims = Claims::new(&self.credentials, scopes, None);
-        let signed = signer
-            .sign_claims(&claims)
-            .map_err(GCPAuthError::TLSError)?;
+        let signed = signer.sign_claims(&claims).map_err(Error::TLSError)?;
         let rqbody = form_urlencoded::Serializer::new(String::new())
             .extend_pairs(&[("grant_type", GRANT_TYPE), ("assertion", signed.as_str())])
             .finish();
@@ -57,7 +51,7 @@ impl ServiceAccount for CustomServiceAccount {
         let token = client
             .request(request)
             .await
-            .map_err(GCPAuthError::OAuthConnectionError)?
+            .map_err(Error::OAuthConnectionError)?
             .deserialize()
             .await?;
         let key = scopes.iter().map(|x| (*x).to_string()).collect();
@@ -90,10 +84,10 @@ pub struct ApplicationCredentials {
 }
 
 impl ApplicationCredentials {
-    async fn from_file<T: AsRef<Path>>(path: T) -> Result<ApplicationCredentials, GCPAuthError> {
+    async fn from_file<T: AsRef<Path>>(path: T) -> Result<ApplicationCredentials, Error> {
         let content = fs::read_to_string(path)
             .await
-            .map_err(GCPAuthError::AplicationProfilePath)?;
-        Ok(serde_json::from_str(&content).map_err(GCPAuthError::AplicationProfileFormat)?)
+            .map_err(Error::AplicationProfilePath)?;
+        Ok(serde_json::from_str(&content).map_err(Error::AplicationProfileFormat)?)
     }
 }
