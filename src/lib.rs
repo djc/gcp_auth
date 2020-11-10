@@ -72,7 +72,6 @@ pub use types::Token;
 
 use hyper::Client;
 use hyper_rustls::HttpsConnector;
-use tokio::sync::Mutex;
 
 /// Initialize GCP authentication
 ///
@@ -85,21 +84,21 @@ pub async fn init() -> Result<AuthenticationManager, Error> {
     if let Ok(service_account) = default {
         return Ok(AuthenticationManager {
             client: client.clone(),
-            service_account: Mutex::new(Box::new(service_account)),
+            service_account: Box::new(service_account),
         });
     }
     let custom = custom_service_account::CustomServiceAccount::new().await;
     if let Ok(service_account) = custom {
         return Ok(AuthenticationManager {
             client,
-            service_account: Mutex::new(Box::new(service_account)),
+            service_account: Box::new(service_account),
         });
     }
     let user = default_authorized_user::DefaultAuthorizedUser::new(&client).await;
     if let Ok(user_account) = user {
         return Ok(AuthenticationManager {
             client,
-            service_account: Mutex::new(Box::new(user_account)),
+            service_account: Box::new(user_account),
         });
     }
     Err(Error::NoAuthMethod(

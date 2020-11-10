@@ -2,17 +2,18 @@ use crate::authentication_manager::ServiceAccount;
 use crate::prelude::*;
 use hyper::body::Body;
 use hyper::Method;
+use std::sync::RwLock;
 
 #[derive(Debug)]
 pub struct DefaultServiceAccount {
-    token: Token,
+    token: RwLock<Token>,
 }
 
 impl DefaultServiceAccount {
     const DEFAULT_TOKEN_GCP_URI: &'static str = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token";
 
     pub async fn new(client: &HyperClient) -> Result<Self, Error> {
-        let token = Self::get_token(client).await?;
+        let token = RwLock::new(Self::get_token(client).await?);
         Ok(Self { token })
     }
 
@@ -41,12 +42,12 @@ impl DefaultServiceAccount {
 #[async_trait]
 impl ServiceAccount for DefaultServiceAccount {
     fn get_token(&self, _scopes: &[&str]) -> Option<Token> {
-        Some(self.token.clone())
+        Some(self.token.read().unwrap().clone())
     }
 
-    async fn refresh_token(&mut self, client: &HyperClient, _scopes: &[&str]) -> Result<(), Error> {
+    async fn refresh_token(&self, client: &HyperClient, _scopes: &[&str]) -> Result<Token, Error> {
         let token = Self::get_token(client).await?;
-        self.token = token;
-        Ok(())
+        *self.token.write().unwrap() = token.clone();
+        Ok(token)
     }
 }
