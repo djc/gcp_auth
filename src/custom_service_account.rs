@@ -1,11 +1,11 @@
 use crate::authentication_manager::ServiceAccount;
 use crate::prelude::*;
-use std::sync::Mutex;
+use std::sync::RwLock;
 use tokio::fs;
 
 #[derive(Debug)]
 pub struct CustomServiceAccount {
-    tokens: Mutex<HashMap<Vec<String>, Token>>,
+    tokens: RwLock<HashMap<Vec<String>, Token>>,
     credentials: ApplicationCredentials,
 }
 
@@ -18,7 +18,7 @@ impl CustomServiceAccount {
         let credentials = ApplicationCredentials::from_file(path).await?;
         Ok(Self {
             credentials,
-            tokens: Mutex::new(HashMap::new()),
+            tokens: RwLock::new(HashMap::new()),
         })
     }
 }
@@ -27,7 +27,7 @@ impl CustomServiceAccount {
 impl ServiceAccount for CustomServiceAccount {
     fn get_token(&self, scopes: &[&str]) -> Option<Token> {
         let key: Vec<_> = scopes.iter().map(|x| x.to_string()).collect();
-        self.tokens.lock().unwrap().get(&key).cloned()
+        self.tokens.read().unwrap().get(&key).cloned()
     }
 
     async fn refresh_token(&self, client: &HyperClient, scopes: &[&str]) -> Result<Token, Error> {
@@ -56,7 +56,7 @@ impl ServiceAccount for CustomServiceAccount {
             .deserialize::<Token>()
             .await?;
         let key = scopes.iter().map(|x| (*x).to_string()).collect();
-        self.tokens.lock().unwrap().insert(key, token.clone());
+        self.tokens.write().unwrap().insert(key, token.clone());
         Ok(token)
     }
 }
