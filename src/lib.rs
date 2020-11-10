@@ -72,7 +72,7 @@ pub use types::Token;
 
 use hyper::Client;
 use hyper_rustls::HttpsConnector;
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 
 /// Initialize GCP authentication
 ///

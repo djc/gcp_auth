@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use std::sync::Mutex;
+use tokio::sync::Mutex;
 
 #[async_trait]
 pub trait ServiceAccount: Send {
@@ -20,7 +20,7 @@ impl AuthenticationManager {
     ///
     /// Token can be used in the request authorization header in format "Bearer {token}"
     pub async fn get_token(&self, scopes: &[&str]) -> Result<Token, Error> {
-        let mut sa = self.service_account.lock().unwrap();
+        let mut sa = self.service_account.lock().await;
         let mut token = sa.get_token(scopes);
 
         if token.is_none() || token.clone().unwrap().has_expired() {
