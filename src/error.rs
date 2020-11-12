@@ -82,6 +82,18 @@ pub enum Error {
     #[error("Home directory not found")]
     NoHomeDir,
 
+    /// Project ID not supported for current authentication method
+    #[error("Project ID not supported for current authentication method")]
+    NoProjectId,
+
+    /// Project ID not found through current authentication method
+    #[error("Project ID not found through current authentication method")]
+    ProjectIdNotFound,
+
+    /// Project ID is invalid UTF-8
+    #[error("Project ID is invalid UTF-8")]
+    ProjectIdNonUtf8,
+
     /// Represents all other cases of `std::io::Error`.
     #[error(transparent)]
     IOError(#[from] std::io::Error),
