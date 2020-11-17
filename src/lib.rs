@@ -1,13 +1,14 @@
 //! GCP auth provides authentication using service accounts Google Cloud Platform (GCP)
 //!
-//! The library can be used in two ways:
+//! The library looks for authentication methods in the following order:
 //!
-//! 1. Invoking the library inside GCP environment fetches the default service account for the service and
-//! the application is authenticated using that particular account
-//! 2. Providing a path to service account JSON configuration file using GOOGLE_APPLICATION_CREDENTIALS environment
+//! 1. Path to service account JSON configuration file using GOOGLE_APPLICATION_CREDENTIALS environment
 //! variable. The service account configuration file can be downloaded in the IAM service when displaying service account detail.
 //! The downloaded JSON file should be provided without any further modification.
-//! 3. Local user authetincation for development purposes using `gcloud auth` application.
+//! 2. Invoking the library inside GCP environment fetches the default service account for the service and
+//! the application is authenticated using that particular account
+//! 3. Application default credentials. Local user authetincation for development purposes created using `gcloud auth` application.
+//! 4. If none of the above can be used an error occurs
 //!
 //! The tokens are single-use and as such they shouldn't be cached and for each use a new token should be requested.
 //! Library handles token caching for their lifetime and so it won't make a request if a token with appropriate scope
@@ -80,17 +81,17 @@ pub async fn init() -> Result<AuthenticationManager, Error> {
     let https = HttpsConnector::new();
     let client = Client::builder().build::<_, hyper::Body>(https);
 
-    let default = default_service_account::DefaultServiceAccount::new(&client).await;
-    if let Ok(service_account) = default {
-        return Ok(AuthenticationManager {
-            client: client.clone(),
-            service_account: Box::new(service_account),
-        });
-    }
     let custom = custom_service_account::CustomServiceAccount::new().await;
     if let Ok(service_account) = custom {
         return Ok(AuthenticationManager {
             client,
+            service_account: Box::new(service_account),
+        });
+    }
+    let default = default_service_account::DefaultServiceAccount::new(&client).await;
+    if let Ok(service_account) = default {
+        return Ok(AuthenticationManager {
+            client: client.clone(),
             service_account: Box::new(service_account),
         });
     }
