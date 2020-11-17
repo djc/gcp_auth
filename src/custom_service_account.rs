@@ -25,6 +25,13 @@ impl CustomServiceAccount {
 
 #[async_trait]
 impl ServiceAccount for CustomServiceAccount {
+    async fn project_id(&self, _: &HyperClient) -> Result<String, Error> {
+        match &self.credentials.project_id {
+            Some(pid) => Ok(pid.clone()),
+            None => Err(Error::ProjectIdNotFound),
+        }
+    }
+
     fn get_token(&self, scopes: &[&str]) -> Option<Token> {
         let key: Vec<_> = scopes.iter().map(|x| x.to_string()).collect();
         self.tokens.read().unwrap().get(&key).cloned()

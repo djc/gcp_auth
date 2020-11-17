@@ -53,6 +53,10 @@ impl DefaultAuthorizedUser {
 
 #[async_trait]
 impl ServiceAccount for DefaultAuthorizedUser {
+    async fn project_id(&self, _: &HyperClient) -> Result<String, Error> {
+        Err(Error::NoProjectId)
+    }
+
     fn get_token(&self, _scopes: &[&str]) -> Option<Token> {
         Some(self.token.read().unwrap().clone())
     }
