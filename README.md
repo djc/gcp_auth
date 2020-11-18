@@ -15,11 +15,17 @@ providing authentication using services accounts. Once authenticated, the servic
 account can be used to acquire bearer tokens for use in authenticating against GCP
 services.
 
-Library implements two authenticatiom methods:
+The library looks for authentication methods in the following order:
 
-1. Default service accounts - can be used inside GCP
-2. Custom service account - provided using an environment variable
-3. Local user authentication - for development purposes only, using `gcloud auth` application
+1. Path to service account JSON configuration file using GOOGLE_APPLICATION_CREDENTIALS
+environment variable. The service account configuration file can be downloaded in the
+IAM service when displaying service account detail. The downloaded JSON file should 
+be provided without any further modification.
+2. Invoking the library inside GCP environment fetches the default service account
+for the service and he application is authenticated using that particular account
+3. Application default credentials. Local user authetincation for development purposes
+created using `gcloud auth` application.
+4. If none of the above can be used an error occurs
 
 Tokens should not be cached in the application; before every use a new token should
 be requested. The GCP auth library contains logic to determine if an already
