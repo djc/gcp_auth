@@ -68,6 +68,20 @@ set up using the `gcloud auth` utility. Credentials are read from file `~/.confi
 
 No.
 
+## Getting tokens in multithreaded async programs
+
+There is a simple pattern that can be used in async/await programs,
+to avoid creating multiple instances of `AuthenticationManager`:
+
+```rust
+use once_cell::sync::Lazy;
+
+static AUTHENTICATOR: Lazy<gcp_auth::AuthenticationManager> =
+    Lazy::new(|| {
+        futures::executor::block_on(gcp_auth::init()).expect("Should set-up auth")
+    });
+```
+
 # License
 
 Parts of the implementatino have been sourced from [yup-oauth2](https://github.com/dermesser/yup-oauth2).
