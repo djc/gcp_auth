@@ -21,7 +21,7 @@ pub enum Error {
 
     /// Error when establishing connection to OAuth server
     #[error("Could not establish connection with OAuth server")]
-    OAuthConnectionError(hyper::error::Error),
+    OAuthConnectionError(hyper::Error),
 
     /// Error when parsin response from OAuth server
     #[error("Could not parse OAuth server reponse")]
@@ -60,7 +60,7 @@ pub enum Error {
 
     /// Could not connect to  server
     #[error("Could not establish connection with server")]
-    ConnectionError(hyper::error::Error),
+    ConnectionError(hyper::Error),
 
     /// Could not parse response from server
     #[error("Could not parse server reponse")]
