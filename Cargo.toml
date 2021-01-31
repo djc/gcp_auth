@@ -1,6 +1,6 @@
 [package]
 name = "gcp_auth"
-version = "0.3.2"
+version = "0.4.0"
 authors = ["Peter Hrvola <peter.hrvola@gmail.com>"]
 repository = "https://github.com/hrvolapeter/gcp_auth"
 description = "Google cloud platform (GCP) authentication using default and custom service accounts"
@@ -12,19 +12,19 @@ license = "MIT"
 edition = "2018"
 
 [features]
-default = ["hyper-rustls/native-tokio"]
-webpki-roots = ["hyper-rustls/webpki-tokio"]
+default = ["hyper-rustls/rustls-native-certs"]
+webpki-roots = ["hyper-rustls/webpki-roots"]
 
 [dependencies]
 base64 = "0.13"
 chrono = { version = "0.4", features = ["serde"] }
-hyper = "0.13"
-hyper-rustls = { version = "0.21", default-features = false }
+hyper = { version = "0.14.2", features = ["client", "runtime"] }
+hyper-rustls = { version = "0.22.1", default-features = false, features = ["tokio-runtime"] }
 log = "0.4"
-rustls = "0.18.1"
+rustls = "0.19.0"
 serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0"
-tokio = { version = "0.2", features = ["fs"] }
+tokio = { version = "1.1", features = ["fs"] }
 url = "2"
 async-trait = "0.1"
 thiserror = "1.0"

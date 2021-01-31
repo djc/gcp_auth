@@ -78,9 +78,12 @@ use hyper_rustls::HttpsConnector;
 ///
 /// Returns `AuthenticationManager` which can be used to obtain tokens
 pub async fn init() -> Result<AuthenticationManager, Error> {
-    let https = HttpsConnector::new();
-    let client = Client::builder().build::<_, hyper::Body>(https);
+    #[cfg(feature = "webpki-roots")]
+    let https = HttpsConnector::with_webpki_roots();
+    #[cfg(not(feature = "webpki-roots"))]
+    let https = HttpsConnector::with_native_roots();
 
+    let client = Client::builder().build::<_, hyper::Body>(https);
     let custom = custom_service_account::CustomServiceAccount::new().await;
     if let Ok(service_account) = custom {
         return Ok(AuthenticationManager {
