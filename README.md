@@ -37,8 +37,9 @@ When running inside GCP the library can be asked without any further configurati
 provide a bearer token for the current service account of the service.
 
 ```rust
+let scopes = &["https://www.googleapis.com/auth/bigquery/"];
 let authentication_manager = gcp_auth::init().await?;
-let token = authentication_manager.get_token().await?;
+let token = authentication_manager.get_token(scopes).await?;
 ```
 
 ## Custom service account
@@ -52,15 +53,16 @@ application at run time. The path to the configuration file is specified by the
 
 ```rust
 // With the GOOGLE_APPLICATION_CREDENTIALS environment variable set
+let scopes = &["https://www.googleapis.com/auth/bigquery/"];
 let authentication_manager = gcp_auth::init().await?;
-let token = authentication_manager.get_token().await?;
+let token = authentication_manager.get_token(&scopes).await?;
 ```
 
 ## Local user authentication
 
 This authentication method allows developers to authenticate again GCP when
 developing locally. Its use should be limited to development. Credentials can be
-set up using the `gcloud auth` utility. Credentials are read from file `~/.config/gcloud/ication_default_credentials.json`.
+set up using the `gcloud auth` utility. Credentials are read from file `~/.config/gcloud/application_default_credentials.json`.
 
 ## FAQ
 
