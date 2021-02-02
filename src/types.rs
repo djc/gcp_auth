@@ -15,7 +15,8 @@ pub struct Token {
 }
 
 impl Token {
-    pub(crate) fn has_expired(&self) -> bool {
+    /// Define if the token has has_expired
+    pub fn has_expired(&self) -> bool {
         self.expires_at
             .map(|expiration_time| expiration_time - chrono::Duration::seconds(30) <= Utc::now())
             .unwrap_or(false)
