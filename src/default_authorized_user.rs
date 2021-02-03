@@ -13,7 +13,7 @@ pub struct DefaultAuthorizedUser {
 impl DefaultAuthorizedUser {
     const DEFAULT_TOKEN_GCP_URI: &'static str = "https://accounts.google.com/o/oauth2/token";
     const USER_CREDENTIALS_PATH: &'static str =
-        "/.config/gcloud/application_default_credentials.json";
+        ".config/gcloud/application_default_credentials.json";
 
     pub async fn new(client: &HyperClient) -> Result<Self, Error> {
         let token = RwLock::new(Self::get_token(client).await?);
@@ -31,9 +31,10 @@ impl DefaultAuthorizedUser {
 
     async fn get_token(client: &HyperClient) -> Result<Token, Error> {
         log::debug!("Loading user credentials file");
-        let home = dirs_next::home_dir().ok_or(Error::NoHomeDir)?;
+        let mut home = dirs_next::home_dir().ok_or(Error::NoHomeDir)?;
+        home.push(Self::USER_CREDENTIALS_PATH);
         let cred =
-            UserCredentials::from_file(home.display().to_string() + Self::USER_CREDENTIALS_PATH)
+            UserCredentials::from_file(home.display().to_string())
                 .await?;
         let req = Self::build_token_request(&RerfeshRequest {
             client_id: cred.client_id,

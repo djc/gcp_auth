@@ -1,0 +1,17 @@
+[package]
+name = "examples"
+version = "0.0.0"
+publish = false
+edition = "2018"
+
+# If you copy one of the examples into a new project, you should be using
+# [dependencies] instead.
+[dev-dependencies]
+tokio = { version = "1.1", features = ["full"] }
+# gcp_auth = "0.4.0"
+gcp_auth = {path = ".."}
+env_logger = "0.8"
+
+[[example]]
+name = "simple"
+path = "simple.rs"
