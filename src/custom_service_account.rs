@@ -10,15 +10,7 @@ pub struct CustomServiceAccount {
 }
 
 impl CustomServiceAccount {
-    const GOOGLE_APPLICATION_CREDENTIALS: &'static str = "GOOGLE_APPLICATION_CREDENTIALS";
-
-    pub async fn new() -> Result<Self, Error> {
-        let path = std::env::var(Self::GOOGLE_APPLICATION_CREDENTIALS)
-            .map_err(|_| Error::AplicationProfileMissing)?;
-        Self::new_from_file_path(path.as_str()).await      
-    }
-
-    pub async fn new_from_file_path(path: &str) -> Result<Self, Error> {
+    pub async fn from_file(path: &str) -> Result<Self, Error> {
         let credentials = ApplicationCredentials::from_file(path).await?;
         Ok(Self {
             credentials,
