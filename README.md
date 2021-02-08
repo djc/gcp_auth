@@ -58,6 +58,14 @@ let authentication_manager = gcp_auth::init().await?;
 let token = authentication_manager.get_token(&scopes).await?;
 ```
 
+You may instantiate `authentication_manager` from a credentials file path using the method `from_credentials_file`:
+
+```async
+ // `credentials_path` variable is the path for the credentials `.json` file.
+ let authentication_manager = gcp_auth::from_credentials_file(credentials_path).await?;
+ let token = authentication_manager.get_token().await?;
+```
+
 ## Local user authentication
 
 This authentication method allows developers to authenticate again GCP when

@@ -37,6 +37,14 @@
 //! let authentication_manager = gcp_auth::init().await?;
 //! let token = authentication_manager.get_token().await?;
 //! ```
+//! You may instantiate `authentication_manager` from a credentials file path using the method `from_credentials_file`:
+//!
+//! ```async
+//! // `credentials_path` variable is the path for the credentials `.json` file.
+//! let authentication_manager = gcp_auth::from_credentials_file(credentials_path).await?;
+//! let token = authentication_manager.get_token().await?;
+//! ```
+//!
 //! # Local user authentication
 //! This authentication method allows developers to authenticate again GCP services when developign locally.
 //! The method is intended only for development. Credentials can be set-up using `gcloud auth` utility.
@@ -74,17 +82,17 @@ pub use types::Token;
 use hyper::Client;
 use hyper_rustls::HttpsConnector;
 
-/// Initialize GCP authentication
+/// Initialize GCP authentication based on a credentials file
 ///
 /// Returns `AuthenticationManager` which can be used to obtain tokens
-pub async fn init() -> Result<AuthenticationManager, Error> {
+pub async fn from_credentials_file(path: &str) -> Result<AuthenticationManager, Error> {
     #[cfg(feature = "webpki-roots")]
     let https = HttpsConnector::with_webpki_roots();
     #[cfg(not(feature = "webpki-roots"))]
     let https = HttpsConnector::with_native_roots();
 
     let client = Client::builder().build::<_, hyper::Body>(https);
-    let custom = custom_service_account::CustomServiceAccount::new().await;
+    let custom = custom_service_account::CustomServiceAccount::from_file(path).await;
     if let Ok(service_account) = custom {
         return Ok(AuthenticationManager {
             client,
@@ -110,4 +118,15 @@ pub async fn init() -> Result<AuthenticationManager, Error> {
         Box::new(default.unwrap_err()),
         Box::new(user.unwrap_err()),
     ))
+}
+
+/// Initialize GCP authentication
+///
+/// Returns `AuthenticationManager` which can be used to obtain tokens
+pub async fn init() -> Result<AuthenticationManager, Error> {
+    const GOOGLE_APPLICATION_CREDENTIALS: &'static str = "GOOGLE_APPLICATION_CREDENTIALS";
+    let path = std::env::var(GOOGLE_APPLICATION_CREDENTIALS)
+            .map_err(|_| Error::AplicationProfileMissing)?;
+
+    from_credentials_file(&path).await
 }
