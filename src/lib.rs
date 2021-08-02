@@ -86,10 +86,10 @@ use hyper_rustls::HttpsConnector;
 ///
 /// Returns `AuthenticationManager` which can be used to obtain tokens
 pub async fn from_credentials_file(path: &str) -> Result<AuthenticationManager, Error> {
-    get_service_account(Some(path.to_owned())).await
+    get_authentication_manager(Some(path.to_owned())).await
 }
 
-async fn get_service_account(
+async fn get_authentication_manager(
     credential_path: Option<String>,
 ) -> Result<AuthenticationManager, Error> {
     #[cfg(feature = "webpki-roots")]
@@ -134,5 +134,5 @@ async fn get_service_account(
 ///
 /// Returns `AuthenticationManager` which can be used to obtain tokens
 pub async fn init() -> Result<AuthenticationManager, Error> {
-    get_service_account(None).await
+    get_authentication_manager(None).await
 }
