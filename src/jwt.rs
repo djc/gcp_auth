@@ -87,14 +87,14 @@ impl JWTSigner {
         let signing_key = sign::RSASigningKey::new(&key).map_err(|_| Error::SignerInit)?;
         let signer = signing_key
             .choose_scheme(&[rustls::SignatureScheme::RSA_PKCS1_SHA256])
-            .ok_or_else(|| Error::SignerSchemeError)?;
+            .ok_or(Error::SignerSchemeError)?;
         Ok(JWTSigner { signer })
     }
 
     pub fn sign_claims(&self, claims: &Claims) -> Result<String, rustls::TLSError> {
         let mut jwt_head = Self::encode_claims(claims);
         let signature = self.signer.sign(jwt_head.as_bytes())?;
-        jwt_head.push_str(".");
+        jwt_head.push('.');
         append_base64(&signature, &mut jwt_head);
         Ok(jwt_head)
     }
@@ -104,7 +104,7 @@ impl JWTSigner {
     fn encode_claims(claims: &Claims) -> String {
         let mut head = String::new();
         append_base64(GOOGLE_RS256_HEAD, &mut head);
-        head.push_str(".");
+        head.push('.');
         append_base64(&serde_json::to_string(&claims).unwrap(), &mut head);
         head
     }
