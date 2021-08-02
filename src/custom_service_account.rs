@@ -1,4 +1,5 @@
 use crate::authentication_manager::ServiceAccount;
+use crate::error::Error::AplicationProfileMissing;
 use crate::prelude::*;
 use std::sync::RwLock;
 use tokio::fs;
@@ -16,6 +17,13 @@ impl CustomServiceAccount {
             credentials,
             tokens: RwLock::new(HashMap::new()),
         })
+    }
+
+    pub async fn from_env() -> Result<Self, Error> {
+        const GOOGLE_APPLICATION_CREDENTIALS: &str = "GOOGLE_APPLICATION_CREDENTIALS";
+        let path =
+            std::env::var(GOOGLE_APPLICATION_CREDENTIALS).map_err(|_| AplicationProfileMissing)?;
+        CustomServiceAccount::from_file(&path).await
     }
 }
 

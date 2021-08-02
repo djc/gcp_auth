@@ -86,13 +86,24 @@ use hyper_rustls::HttpsConnector;
 ///
 /// Returns `AuthenticationManager` which can be used to obtain tokens
 pub async fn from_credentials_file(path: &str) -> Result<AuthenticationManager, Error> {
+    get_service_account(Some(path.to_owned())).await
+}
+
+async fn get_service_account(
+    credential_path: Option<String>,
+) -> Result<AuthenticationManager, Error> {
     #[cfg(feature = "webpki-roots")]
     let https = HttpsConnector::with_webpki_roots();
     #[cfg(not(feature = "webpki-roots"))]
     let https = HttpsConnector::with_native_roots();
 
     let client = Client::builder().build::<_, hyper::Body>(https);
-    let custom = custom_service_account::CustomServiceAccount::from_file(path).await;
+
+    let custom = match credential_path {
+        Some(path) => custom_service_account::CustomServiceAccount::from_file(&path).await,
+        None => custom_service_account::CustomServiceAccount::from_env().await,
+    };
+
     if let Ok(service_account) = custom {
         return Ok(AuthenticationManager {
             client,
@@ -119,14 +130,9 @@ pub async fn from_credentials_file(path: &str) -> Result<AuthenticationManager, 
         Box::new(user.unwrap_err()),
     ))
 }
-
 /// Initialize GCP authentication
 ///
 /// Returns `AuthenticationManager` which can be used to obtain tokens
 pub async fn init() -> Result<AuthenticationManager, Error> {
-    const GOOGLE_APPLICATION_CREDENTIALS: &'static str = "GOOGLE_APPLICATION_CREDENTIALS";
-    let path = std::env::var(GOOGLE_APPLICATION_CREDENTIALS)
-            .map_err(|_| Error::AplicationProfileMissing)?;
-
-    from_credentials_file(&path).await
+    get_service_account(None).await
 }
