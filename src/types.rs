@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 pub struct Token {
     access_token: String,
     #[serde(
+        default,
         deserialize_with = "deserialize_time",
         rename(deserialize = "expires_in")
     )]
