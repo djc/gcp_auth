@@ -76,6 +76,9 @@ mod prelude {
         std::collections::HashMap, std::path::Path,
     };
 }
+
+use custom_service_account::CustomServiceAccount;
+
 pub use authentication_manager::AuthenticationManager;
 pub use error::Error;
 pub use types::Token;
@@ -105,8 +108,11 @@ async fn get_authentication_manager(
     let client = Client::builder().build::<_, hyper::Body>(https);
 
     let custom = match credential_path {
-        Some(path) => custom_service_account::CustomServiceAccount::from_file(path).await,
-        None => custom_service_account::CustomServiceAccount::from_env().await,
+        Some(path) => CustomServiceAccount::from_file(path).await,
+        None => match std::env::var("GOOGLE_APPLICATION_CREDENTIALS") {
+            Ok(path) => CustomServiceAccount::from_file(Path::new(&path)).await,
+            Err(_) => Err(Error::ApplicationProfileMissing),
+        },
     };
 
     if let Ok(service_account) = custom {
