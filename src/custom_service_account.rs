@@ -42,12 +42,12 @@ impl ServiceAccount for CustomServiceAccount {
 
     async fn refresh_token(&self, client: &HyperClient, scopes: &[&str]) -> Result<Token, Error> {
         use crate::jwt::Claims;
-        use crate::jwt::JWTSigner;
+        use crate::jwt::JwtSigner;
         use crate::jwt::GRANT_TYPE;
         use hyper::header;
         use url::form_urlencoded;
 
-        let signer = JWTSigner::new(&self.credentials.private_key)?;
+        let signer = JwtSigner::new(&self.credentials.private_key)?;
 
         let claims = Claims::new(&self.credentials, scopes, None);
         let signed = signer.sign_claims(&claims).map_err(Error::TLSError)?;

@@ -82,18 +82,18 @@ impl<'a> Claims<'a> {
 }
 
 /// A JSON Web Token ready for signing.
-pub(crate) struct JWTSigner {
+pub(crate) struct JwtSigner {
     signer: Box<dyn rustls::sign::Signer>,
 }
 
-impl JWTSigner {
+impl JwtSigner {
     pub(crate) fn new(private_key: &str) -> Result<Self, Error> {
         let key = decode_rsa_key(private_key)?;
         let signing_key = sign::RSASigningKey::new(&key).map_err(|_| Error::SignerInit)?;
         let signer = signing_key
             .choose_scheme(&[rustls::SignatureScheme::RSA_PKCS1_SHA256])
             .ok_or(Error::SignerSchemeError)?;
-        Ok(JWTSigner { signer })
+        Ok(JwtSigner { signer })
     }
 
     pub(crate) fn sign_claims(&self, claims: &Claims) -> Result<String, rustls::TLSError> {
