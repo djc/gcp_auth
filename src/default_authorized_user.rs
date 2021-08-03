@@ -41,7 +41,7 @@ impl DefaultAuthorizedUser {
         let mut home = dirs_next::home_dir().ok_or(Error::NoHomeDir)?;
         home.push(Self::USER_CREDENTIALS_PATH);
         let cred = UserCredentials::from_file(home.display().to_string()).await?;
-        let req = Self::build_token_request(&RerfeshRequest {
+        let req = Self::build_token_request(&RefreshRequest {
             client_id: cred.client_id,
             client_secret: cred.client_secret,
             grant_type: "refresh_token".to_string(),
@@ -75,7 +75,7 @@ impl ServiceAccount for DefaultAuthorizedUser {
 }
 
 #[derive(Serialize, Debug)]
-struct RerfeshRequest {
+struct RefreshRequest {
     client_id: String,
     client_secret: String,
     grant_type: String,
