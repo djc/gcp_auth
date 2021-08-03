@@ -39,7 +39,7 @@ impl ServiceAccount for GCloudAuthorizedUser {
             Ok(output) if output.status.success() => String::from_utf8(output.stdout)
                 .map_err(|_| GCloudParseError)
                 .and_then(|access_token| {
-                    serde_json::from_value::<Token>(json!({ "access_token": access_token }))
+                    serde_json::from_value::<Token>(json!({ "access_token": access_token.trim() }))
                         .map_err(ParsingError)
                 }),
             _ => Err(GCloudError),
