@@ -7,7 +7,7 @@
 //! The downloaded JSON file should be provided without any further modification.
 //! 2. Invoking the library inside GCP environment fetches the default service account for the service and
 //! the application is authenticated using that particular account
-//! 3. Application default credentials. Local user authetincation for development purposes created using `gcloud auth` application.
+//! 3. Application default credentials. Local user authentication for development purposes created using `gcloud auth` application.
 //! 4. If none of the above can be used an error occurs
 //!
 //! The tokens are single-use and as such they shouldn't be cached and for each use a new token should be requested.
@@ -33,7 +33,7 @@
 //! `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
 //!
 //! ```async
-//! // GOOGLE_APPLICATION_CREDENTIALS environtment variable is set-up
+//! // GOOGLE_APPLICATION_CREDENTIALS environment variable is set-up
 //! let authentication_manager = gcp_auth::init().await?;
 //! let token = authentication_manager.get_token().await?;
 //! ```
@@ -46,7 +46,7 @@
 //! ```
 //!
 //! # Local user authentication
-//! This authentication method allows developers to authenticate again GCP services when developign locally.
+//! This authentication method allows developers to authenticate again GCP services when developing locally.
 //! The method is intended only for development. Credentials can be set-up using `gcloud auth` utility.
 //! Credentials are read from file `~/.config/gcloud/application_default_credentials.json`.
 //!
@@ -114,6 +114,13 @@ async fn get_authentication_manager(
             service_account: Box::new(service_account),
         });
     }
+    let gcloud = gcloud_authorized_user::GCloudAuthorizedUser::new().await;
+    if let Ok(service_account) = gcloud {
+        return Ok(AuthenticationManager {
+            client: client.clone(),
+            service_account: Box::new(service_account),
+        });
+    }
     let default = default_service_account::DefaultServiceAccount::new(&client).await;
     if let Ok(service_account) = default {
         return Ok(AuthenticationManager {
@@ -130,6 +137,7 @@ async fn get_authentication_manager(
     }
     Err(Error::NoAuthMethod(
         Box::new(custom.unwrap_err()),
+        Box::new(gcloud.unwrap_err()),
         Box::new(default.unwrap_err()),
         Box::new(user.unwrap_err()),
     ))
