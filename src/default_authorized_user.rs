@@ -33,9 +33,7 @@ impl DefaultAuthorizedUser {
         log::debug!("Loading user credentials file");
         let mut home = dirs_next::home_dir().ok_or(Error::NoHomeDir)?;
         home.push(Self::USER_CREDENTIALS_PATH);
-        let cred =
-            UserCredentials::from_file(home.display().to_string())
-                .await?;
+        let cred = UserCredentials::from_file(home.display().to_string()).await?;
         let req = Self::build_token_request(&RerfeshRequest {
             client_id: cred.client_id,
             client_secret: cred.client_secret,
