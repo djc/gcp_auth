@@ -12,7 +12,7 @@ use rustls::{
 };
 use serde::Serialize;
 
-pub const GRANT_TYPE: &str = "urn:ietf:params:oauth:grant-type:jwt-bearer";
+pub(crate) const GRANT_TYPE: &str = "urn:ietf:params:oauth:grant-type:jwt-bearer";
 const GOOGLE_RS256_HEAD: &str = r#"{"alg":"RS256","typ":"JWT"}"#;
 
 /// Encodes s as Base64
@@ -43,7 +43,7 @@ fn decode_rsa_key(pem_pkcs8: &str) -> Result<PrivateKey, io::Error> {
 /// Permissions requested for a JWT.
 /// See https://developers.google.com/identity/protocols/OAuth2ServiceAccount#authorizingrequests.
 #[derive(Serialize, Debug)]
-pub struct Claims<'a> {
+pub(crate) struct Claims<'a> {
     iss: &'a str,
     aud: &'a str,
     exp: i64,
@@ -53,7 +53,11 @@ pub struct Claims<'a> {
 }
 
 impl<'a> Claims<'a> {
-    pub fn new<T>(key: &'a ApplicationCredentials, scopes: &[T], subject: Option<&'a str>) -> Self
+    pub(crate) fn new<T>(
+        key: &'a ApplicationCredentials,
+        scopes: &[T],
+        subject: Option<&'a str>,
+    ) -> Self
     where
         T: std::string::ToString,
     {
@@ -82,7 +86,7 @@ pub(crate) struct JWTSigner {
 }
 
 impl JWTSigner {
-    pub fn new(private_key: &str) -> Result<Self, Error> {
+    pub(crate) fn new(private_key: &str) -> Result<Self, Error> {
         let key = decode_rsa_key(private_key)?;
         let signing_key = sign::RSASigningKey::new(&key).map_err(|_| Error::SignerInit)?;
         let signer = signing_key
@@ -91,7 +95,7 @@ impl JWTSigner {
         Ok(JWTSigner { signer })
     }
 
-    pub fn sign_claims(&self, claims: &Claims) -> Result<String, rustls::TLSError> {
+    pub(crate) fn sign_claims(&self, claims: &Claims) -> Result<String, rustls::TLSError> {
         let mut jwt_head = Self::encode_claims(claims);
         let signature = self.signer.sign(jwt_head.as_bytes())?;
         jwt_head.push('.');

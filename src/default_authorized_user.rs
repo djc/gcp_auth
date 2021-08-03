@@ -6,7 +6,7 @@ use std::sync::RwLock;
 use tokio::fs;
 
 #[derive(Debug)]
-pub struct DefaultAuthorizedUser {
+pub(crate) struct DefaultAuthorizedUser {
     token: RwLock<Token>,
 }
 
@@ -15,7 +15,7 @@ impl DefaultAuthorizedUser {
     const USER_CREDENTIALS_PATH: &'static str =
         ".config/gcloud/application_default_credentials.json";
 
-    pub async fn new(client: &HyperClient) -> Result<Self, Error> {
+    pub(crate) async fn new(client: &HyperClient) -> Result<Self, Error> {
         let token = RwLock::new(Self::get_token(client).await?);
         Ok(Self { token })
     }
@@ -78,13 +78,13 @@ struct RerfeshRequest {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct UserCredentials {
     /// Client id
-    pub client_id: String,
+    pub(crate) client_id: String,
     /// Client secret
-    pub client_secret: String,
+    pub(crate) client_secret: String,
     /// Refresh Token
-    pub refresh_token: String,
+    pub(crate) refresh_token: String,
     /// Type
-    pub r#type: String,
+    pub(crate) r#type: String,
 }
 
 impl UserCredentials {

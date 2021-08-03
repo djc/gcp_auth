@@ -2,7 +2,7 @@ use crate::prelude::*;
 use serde::de;
 
 #[async_trait]
-pub trait HyperExt {
+pub(crate) trait HyperExt {
     async fn deserialize<T>(self) -> Result<T, Error>
     where
         T: de::DeserializeOwned;

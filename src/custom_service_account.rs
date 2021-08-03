@@ -5,20 +5,20 @@ use std::sync::RwLock;
 use tokio::fs;
 
 #[derive(Debug)]
-pub struct CustomServiceAccount {
+pub(crate) struct CustomServiceAccount {
     tokens: RwLock<HashMap<Vec<String>, Token>>,
     credentials: ApplicationCredentials,
 }
 
 impl CustomServiceAccount {
-    pub async fn from_file(path: &Path) -> Result<Self, Error> {
+    pub(crate) async fn from_file(path: &Path) -> Result<Self, Error> {
         Ok(Self {
             credentials: ApplicationCredentials::from_file(path).await?,
             tokens: RwLock::new(HashMap::new()),
         })
     }
 
-    pub async fn from_env() -> Result<Self, Error> {
+    pub(crate) async fn from_env() -> Result<Self, Error> {
         const GOOGLE_APPLICATION_CREDENTIALS: &str = "GOOGLE_APPLICATION_CREDENTIALS";
         let path =
             std::env::var(GOOGLE_APPLICATION_CREDENTIALS).map_err(|_| ApplicationProfileMissing)?;
@@ -72,26 +72,26 @@ impl ServiceAccount for CustomServiceAccount {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ApplicationCredentials {
-    pub r#type: Option<String>,
+pub(crate) struct ApplicationCredentials {
+    pub(crate) r#type: Option<String>,
     /// project_id
-    pub project_id: Option<String>,
+    pub(crate) project_id: Option<String>,
     /// private_key_id
-    pub private_key_id: Option<String>,
+    pub(crate) private_key_id: Option<String>,
     /// private_key
-    pub private_key: String,
+    pub(crate) private_key: String,
     /// client_email
-    pub client_email: String,
+    pub(crate) client_email: String,
     /// client_id
-    pub client_id: Option<String>,
+    pub(crate) client_id: Option<String>,
     /// auth_uri
-    pub auth_uri: Option<String>,
+    pub(crate) auth_uri: Option<String>,
     /// token_uri
-    pub token_uri: String,
+    pub(crate) token_uri: String,
     /// auth_provider_x509_cert_url
-    pub auth_provider_x509_cert_url: Option<String>,
+    pub(crate) auth_provider_x509_cert_url: Option<String>,
     /// client_x509_cert_url
-    pub client_x509_cert_url: Option<String>,
+    pub(crate) client_x509_cert_url: Option<String>,
 }
 
 impl ApplicationCredentials {

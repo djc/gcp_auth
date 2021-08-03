@@ -6,7 +6,7 @@ use std::str;
 use std::sync::RwLock;
 
 #[derive(Debug)]
-pub struct DefaultServiceAccount {
+pub(crate) struct DefaultServiceAccount {
     token: RwLock<Token>,
 }
 
@@ -15,7 +15,7 @@ impl DefaultServiceAccount {
         "http://metadata.google.internal/computeMetadata/v1/project/project-id";
     const DEFAULT_TOKEN_GCP_URI: &'static str = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token";
 
-    pub async fn new(client: &HyperClient) -> Result<Self, Error> {
+    pub(crate) async fn new(client: &HyperClient) -> Result<Self, Error> {
         let token = RwLock::new(Self::get_token(client).await?);
         Ok(Self { token })
     }

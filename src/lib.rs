@@ -58,6 +58,7 @@
 
 #![deny(missing_docs)]
 #![deny(warnings)]
+#![deny(unreachable_pub)]
 #![allow(clippy::pedantic)]
 
 mod authentication_manager;
