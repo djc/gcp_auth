@@ -1,9 +1,16 @@
-use crate::authentication_manager::ServiceAccount;
-use crate::prelude::*;
-use hyper::body::Body;
-use hyper::Method;
+use std::path::Path;
 use std::sync::RwLock;
+
+use async_trait::async_trait;
+use hyper::body::Body;
+use hyper::{Method, Request};
+use serde::{Deserialize, Serialize};
 use tokio::fs;
+
+use crate::authentication_manager::ServiceAccount;
+use crate::error::Error;
+use crate::types::{HyperClient, Token};
+use crate::util::HyperExt;
 
 #[derive(Debug)]
 pub(crate) struct DefaultAuthorizedUser {

@@ -69,13 +69,6 @@ mod error;
 mod jwt;
 mod types;
 mod util;
-mod prelude {
-    pub(crate) use {
-        crate::error::Error, crate::types::HyperClient, crate::types::Token, crate::util::HyperExt,
-        async_trait::async_trait, hyper::Request, serde::Deserialize, serde::Serialize,
-        std::collections::HashMap, std::path::Path,
-    };
-}
 
 use custom_service_account::CustomServiceAccount;
 

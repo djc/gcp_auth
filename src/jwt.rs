@@ -2,8 +2,6 @@
 
 use std::io;
 
-use crate::custom_service_account::ApplicationCredentials;
-use crate::prelude::*;
 use rustls::{
     self,
     internal::pemfile,
@@ -11,6 +9,9 @@ use rustls::{
     PrivateKey,
 };
 use serde::Serialize;
+
+use crate::custom_service_account::ApplicationCredentials;
+use crate::error::Error;
 
 pub(crate) const GRANT_TYPE: &str = "urn:ietf:params:oauth:grant-type:jwt-bearer";
 const GOOGLE_RS256_HEAD: &str = r#"{"alg":"RS256","typ":"JWT"}"#;

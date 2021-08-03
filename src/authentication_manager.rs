@@ -1,4 +1,7 @@
-use crate::prelude::*;
+use async_trait::async_trait;
+
+use crate::error::Error;
+use crate::types::{HyperClient, Token};
 
 #[async_trait]
 pub(crate) trait ServiceAccount: Send + Sync {
