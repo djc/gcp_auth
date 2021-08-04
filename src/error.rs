@@ -6,16 +6,17 @@ pub enum Error {
     ///
     /// Application can authenticate against GCP using:
     ///
-    /// - Defaul service account - available inside GCP platform using GCP Instance Metadata server
+    /// - Default service account - available inside GCP platform using GCP Instance Metadata server
     /// - Service account file - provided using `GOOGLE_APPLICATION_CREDENTIALS` with path
+    /// - GCloud authorized user - retrieved using `gcloud auth` command
     ///
     /// All authentication methods have been tested and none succeeded.
-    /// Service account file can be donwloaded from GCP in json format.
+    /// Service account file can be downloaded from GCP in json format.
     #[error("No available authentication method was discovered")]
-    NoAuthMethod(Box<Error>, Box<Error>, Box<Error>),
+    NoAuthMethod(Box<Error>, Box<Error>, Box<Error>, Box<Error>),
 
-    /// Error in underlaying RustTLS library.
-    /// Might signal problem with establishin secure connection using trusted certificates
+    /// Error in underlying RustTLS library.
+    /// Might signal problem with establishing secure connection using trusted certificates
     #[error("TLS error")]
     TLSError(rustls::TLSError),
 
@@ -23,14 +24,14 @@ pub enum Error {
     #[error("Could not establish connection with OAuth server")]
     OAuthConnectionError(hyper::Error),
 
-    /// Error when parsin response from OAuth server
-    #[error("Could not parse OAuth server reponse")]
+    /// Error when parsing response from OAuth server
+    #[error("Could not parse OAuth server response")]
     OAuthParsingError(serde_json::error::Error),
 
     /// Variable `GOOGLE_APPLICATION_CREDENTIALS` could not be found in the current environment
     ///
     /// GOOGLE_APPLICATION_CREDENTIALS is used for providing path to json file with applications credentials.
-    /// File can be donwoloaded in GCP Console when creating service account.
+    /// File can be downloaded in GCP Console when creating service account.
     #[error("Path to custom auth credentials was not provided in `GOOGLE_APPLICATION_CREDENTIALS` env variable")]
     ApplicationProfileMissing,
 
@@ -43,7 +44,7 @@ pub enum Error {
     /// Wrong format of custom application profile
     ///
     /// Application profile is downloaded from GCP console and is stored in filesystem on the server.
-    /// Full path is passed to library by seeting `GOOGLE_APPLICATION_CREDENTIALS` variable with path as a value.
+    /// Full path is passed to library by setting `GOOGLE_APPLICATION_CREDENTIALS` variable with path as a value.
     #[error("Application profile provided in `GOOGLE_APPLICATION_CREDENTIALS` was not parsable")]
     ApplicationProfileFormat(serde_json::error::Error),
 
@@ -63,7 +64,7 @@ pub enum Error {
     ConnectionError(hyper::Error),
 
     /// Could not parse response from server
-    #[error("Could not parse server reponse")]
+    #[error("Could not parse server response")]
     ParsingError(serde_json::error::Error),
 
     /// Could not connect to server
@@ -74,7 +75,7 @@ pub enum Error {
     #[error("Couldn't choose signing scheme")]
     SignerSchemeError,
 
-    /// Could not initalize signer
+    /// Could not initialize signer
     #[error("Couldn't initialize signer")]
     SignerInit,
 
@@ -93,6 +94,18 @@ pub enum Error {
     /// Project ID is invalid UTF-8
     #[error("Project ID is invalid UTF-8")]
     ProjectIdNonUtf8,
+
+    /// GCloud executable not found
+    #[error("GCloud executable not found in $PATH")]
+    GCloudNotFound,
+
+    /// GCloud returned an error status
+    #[error("GCloud returned a non OK status")]
+    GCloudError,
+
+    /// GCloud output couldn't be parsed
+    #[error("Failed to parse output of GCloud")]
+    GCloudParseError,
 
     /// Represents all other cases of `std::io::Error`.
     #[error(transparent)]
