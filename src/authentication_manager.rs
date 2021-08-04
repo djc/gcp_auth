@@ -1,7 +1,10 @@
-use crate::prelude::*;
+use async_trait::async_trait;
+
+use crate::error::Error;
+use crate::types::{HyperClient, Token};
 
 #[async_trait]
-pub trait ServiceAccount: Send + Sync {
+pub(crate) trait ServiceAccount: Send + Sync {
     async fn project_id(&self, client: &HyperClient) -> Result<String, Error>;
     fn get_token(&self, scopes: &[&str]) -> Option<Token>;
     async fn refresh_token(&self, client: &HyperClient, scopes: &[&str]) -> Result<Token, Error>;

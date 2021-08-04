@@ -58,6 +58,7 @@
 
 #![deny(missing_docs)]
 #![deny(warnings)]
+#![deny(unreachable_pub)]
 #![allow(clippy::pedantic)]
 
 mod authentication_manager;
@@ -68,16 +69,14 @@ mod error;
 mod jwt;
 mod types;
 mod util;
-mod prelude {
-    pub(crate) use {
-        crate::error::Error, crate::types::HyperClient, crate::types::Token, crate::util::HyperExt,
-        async_trait::async_trait, hyper::Request, serde::Deserialize, serde::Serialize,
-        std::collections::HashMap, std::path::Path,
-    };
-}
+
+use custom_service_account::CustomServiceAccount;
+
 pub use authentication_manager::AuthenticationManager;
 pub use error::Error;
 pub use types::Token;
+
+use std::path::Path;
 
 use hyper::Client;
 use hyper_rustls::HttpsConnector;
@@ -85,12 +84,14 @@ use hyper_rustls::HttpsConnector;
 /// Initialize GCP authentication based on a credentials file
 ///
 /// Returns `AuthenticationManager` which can be used to obtain tokens
-pub async fn from_credentials_file(path: &str) -> Result<AuthenticationManager, Error> {
-    get_authentication_manager(Some(path.to_owned())).await
+pub async fn from_credentials_file<T: AsRef<Path>>(
+    path: T,
+) -> Result<AuthenticationManager, Error> {
+    get_authentication_manager(Some(path.as_ref())).await
 }
 
 async fn get_authentication_manager(
-    credential_path: Option<String>,
+    credential_path: Option<&Path>,
 ) -> Result<AuthenticationManager, Error> {
     #[cfg(feature = "webpki-roots")]
     let https = HttpsConnector::with_webpki_roots();
@@ -100,8 +101,11 @@ async fn get_authentication_manager(
     let client = Client::builder().build::<_, hyper::Body>(https);
 
     let custom = match credential_path {
-        Some(path) => custom_service_account::CustomServiceAccount::from_file(&path).await,
-        None => custom_service_account::CustomServiceAccount::from_env().await,
+        Some(path) => CustomServiceAccount::from_file(path).await,
+        None => match std::env::var("GOOGLE_APPLICATION_CREDENTIALS") {
+            Ok(path) => CustomServiceAccount::from_file(Path::new(&path)).await,
+            Err(_) => Err(Error::ApplicationProfileMissing),
+        },
     };
 
     if let Ok(service_account) = custom {

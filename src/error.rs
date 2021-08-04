@@ -32,20 +32,20 @@ pub enum Error {
     /// GOOGLE_APPLICATION_CREDENTIALS is used for providing path to json file with applications credentials.
     /// File can be donwoloaded in GCP Console when creating service account.
     #[error("Path to custom auth credentials was not provided in `GOOGLE_APPLICATION_CREDENTIALS` env variable")]
-    AplicationProfileMissing,
+    ApplicationProfileMissing,
 
     /// Wrong path to custom application profile credentials provided
     ///
     /// Path has to be defined using `GOOGLE_APPLICATION_CREDENTIALS` environment variable
     #[error("Environment variable `GOOGLE_APPLICATION_CREDENTIALS` contains invalid path to application profile file")]
-    AplicationProfilePath(std::io::Error),
+    ApplicationProfilePath(std::io::Error),
 
     /// Wrong format of custom application profile
     ///
     /// Application profile is downloaded from GCP console and is stored in filesystem on the server.
     /// Full path is passed to library by seeting `GOOGLE_APPLICATION_CREDENTIALS` variable with path as a value.
     #[error("Application profile provided in `GOOGLE_APPLICATION_CREDENTIALS` was not parsable")]
-    AplicationProfileFormat(serde_json::error::Error),
+    ApplicationProfileFormat(serde_json::error::Error),
 
     /// Default user profile not found
     ///
