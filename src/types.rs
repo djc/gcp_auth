@@ -43,4 +43,5 @@ where
     Ok(s)
 }
 
-pub type HyperClient = hyper::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>>;
+pub(crate) type HyperClient =
+    hyper::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>>;

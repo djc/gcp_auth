@@ -1,29 +1,28 @@
-use crate::authentication_manager::ServiceAccount;
-use crate::error::Error::AplicationProfileMissing;
-use crate::prelude::*;
+use std::collections::HashMap;
+use std::path::Path;
 use std::sync::RwLock;
+
+use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use tokio::fs;
 
+use crate::authentication_manager::ServiceAccount;
+use crate::error::Error;
+use crate::types::{HyperClient, Token};
+use crate::util::HyperExt;
+
 #[derive(Debug)]
-pub struct CustomServiceAccount {
+pub(crate) struct CustomServiceAccount {
     tokens: RwLock<HashMap<Vec<String>, Token>>,
     credentials: ApplicationCredentials,
 }
 
 impl CustomServiceAccount {
-    pub async fn from_file(path: &str) -> Result<Self, Error> {
-        let credentials = ApplicationCredentials::from_file(path).await?;
+    pub(crate) async fn from_file(path: &Path) -> Result<Self, Error> {
         Ok(Self {
-            credentials,
+            credentials: ApplicationCredentials::from_file(path).await?,
             tokens: RwLock::new(HashMap::new()),
         })
-    }
-
-    pub async fn from_env() -> Result<Self, Error> {
-        const GOOGLE_APPLICATION_CREDENTIALS: &str = "GOOGLE_APPLICATION_CREDENTIALS";
-        let path =
-            std::env::var(GOOGLE_APPLICATION_CREDENTIALS).map_err(|_| AplicationProfileMissing)?;
-        CustomServiceAccount::from_file(&path).await
     }
 }
 
@@ -43,12 +42,12 @@ impl ServiceAccount for CustomServiceAccount {
 
     async fn refresh_token(&self, client: &HyperClient, scopes: &[&str]) -> Result<Token, Error> {
         use crate::jwt::Claims;
-        use crate::jwt::JWTSigner;
+        use crate::jwt::JwtSigner;
         use crate::jwt::GRANT_TYPE;
         use hyper::header;
         use url::form_urlencoded;
 
-        let signer = JWTSigner::new(&self.credentials.private_key)?;
+        let signer = JwtSigner::new(&self.credentials.private_key)?;
 
         let claims = Claims::new(&self.credentials, scopes, None);
         let signed = signer.sign_claims(&claims).map_err(Error::TLSError)?;
@@ -73,33 +72,33 @@ impl ServiceAccount for CustomServiceAccount {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ApplicationCredentials {
-    pub r#type: Option<String>,
+pub(crate) struct ApplicationCredentials {
+    pub(crate) r#type: Option<String>,
     /// project_id
-    pub project_id: Option<String>,
+    pub(crate) project_id: Option<String>,
     /// private_key_id
-    pub private_key_id: Option<String>,
+    pub(crate) private_key_id: Option<String>,
     /// private_key
-    pub private_key: String,
+    pub(crate) private_key: String,
     /// client_email
-    pub client_email: String,
+    pub(crate) client_email: String,
     /// client_id
-    pub client_id: Option<String>,
+    pub(crate) client_id: Option<String>,
     /// auth_uri
-    pub auth_uri: Option<String>,
+    pub(crate) auth_uri: Option<String>,
     /// token_uri
-    pub token_uri: String,
+    pub(crate) token_uri: String,
     /// auth_provider_x509_cert_url
-    pub auth_provider_x509_cert_url: Option<String>,
+    pub(crate) auth_provider_x509_cert_url: Option<String>,
     /// client_x509_cert_url
-    pub client_x509_cert_url: Option<String>,
+    pub(crate) client_x509_cert_url: Option<String>,
 }
 
 impl ApplicationCredentials {
     async fn from_file<T: AsRef<Path>>(path: T) -> Result<ApplicationCredentials, Error> {
         let content = fs::read_to_string(path)
             .await
-            .map_err(Error::AplicationProfilePath)?;
-        Ok(serde_json::from_str(&content).map_err(Error::AplicationProfileFormat)?)
+            .map_err(Error::ApplicationProfilePath)?;
+        Ok(serde_json::from_str(&content).map_err(Error::ApplicationProfileFormat)?)
     }
 }

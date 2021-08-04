@@ -1,8 +1,10 @@
-use crate::prelude::*;
+use async_trait::async_trait;
 use serde::de;
 
+use crate::error::Error;
+
 #[async_trait]
-pub trait HyperExt {
+pub(crate) trait HyperExt {
     async fn deserialize<T>(self) -> Result<T, Error>
     where
         T: de::DeserializeOwned;

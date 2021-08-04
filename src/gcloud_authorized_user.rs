@@ -2,19 +2,22 @@ use crate::authentication_manager::ServiceAccount;
 use crate::error::Error::{
     GCloudError, GCloudNotFound, GCloudParseError, NoProjectId, ParsingError,
 };
-use crate::prelude::*;
 use serde_json::json;
 use std::path::PathBuf;
 use std::process::Command;
 use which::which;
+use crate::types::HyperClient;
+use crate::error::Error;
+use crate::Token;
+use async_trait::async_trait;
 
 #[derive(Debug)]
-pub struct GCloudAuthorizedUser {
+pub(crate) struct GCloudAuthorizedUser {
     gcloud: PathBuf,
 }
 
 impl GCloudAuthorizedUser {
-    pub async fn new() -> Result<Self, Error> {
+    pub(crate) async fn new() -> Result<Self, Error> {
         which("gcloud")
             .map_err(|_| GCloudNotFound)
             .map(|path| Self { gcloud: path })

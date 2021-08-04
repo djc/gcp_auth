@@ -1,12 +1,19 @@
-use crate::authentication_manager::ServiceAccount;
-use crate::prelude::*;
-use hyper::body::Body;
-use hyper::Method;
+use std::path::Path;
 use std::sync::RwLock;
+
+use async_trait::async_trait;
+use hyper::body::Body;
+use hyper::{Method, Request};
+use serde::{Deserialize, Serialize};
 use tokio::fs;
 
+use crate::authentication_manager::ServiceAccount;
+use crate::error::Error;
+use crate::types::{HyperClient, Token};
+use crate::util::HyperExt;
+
 #[derive(Debug)]
-pub struct DefaultAuthorizedUser {
+pub(crate) struct DefaultAuthorizedUser {
     token: RwLock<Token>,
 }
 
@@ -15,7 +22,7 @@ impl DefaultAuthorizedUser {
     const USER_CREDENTIALS_PATH: &'static str =
         ".config/gcloud/application_default_credentials.json";
 
-    pub async fn new(client: &HyperClient) -> Result<Self, Error> {
+    pub(crate) async fn new(client: &HyperClient) -> Result<Self, Error> {
         let token = RwLock::new(Self::get_token(client).await?);
         Ok(Self { token })
     }
@@ -33,10 +40,8 @@ impl DefaultAuthorizedUser {
         log::debug!("Loading user credentials file");
         let mut home = dirs_next::home_dir().ok_or(Error::NoHomeDir)?;
         home.push(Self::USER_CREDENTIALS_PATH);
-        let cred =
-            UserCredentials::from_file(home.display().to_string())
-                .await?;
-        let req = Self::build_token_request(&RerfeshRequest {
+        let cred = UserCredentials::from_file(home.display().to_string()).await?;
+        let req = Self::build_token_request(&RefreshRequest {
             client_id: cred.client_id,
             client_secret: cred.client_secret,
             grant_type: "refresh_token".to_string(),
@@ -70,7 +75,7 @@ impl ServiceAccount for DefaultAuthorizedUser {
 }
 
 #[derive(Serialize, Debug)]
-struct RerfeshRequest {
+struct RefreshRequest {
     client_id: String,
     client_secret: String,
     grant_type: String,
@@ -80,13 +85,13 @@ struct RerfeshRequest {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct UserCredentials {
     /// Client id
-    pub client_id: String,
+    pub(crate) client_id: String,
     /// Client secret
-    pub client_secret: String,
+    pub(crate) client_secret: String,
     /// Refresh Token
-    pub refresh_token: String,
+    pub(crate) refresh_token: String,
     /// Type
-    pub r#type: String,
+    pub(crate) r#type: String,
 }
 
 impl UserCredentials {
