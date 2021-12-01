@@ -68,8 +68,8 @@ pub enum Error {
     ParsingError(serde_json::error::Error),
 
     /// Could not connect to server
-    #[error("Server unavailable")]
-    ServerUnavailable,
+    #[error("Server unavailable: {0}")]
+    ServerUnavailable(String),
 
     /// Could not determine signer scheme
     #[error("Couldn't choose signing scheme")]

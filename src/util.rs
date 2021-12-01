@@ -16,16 +16,22 @@ impl HyperExt for hyper::Response<hyper::body::Body> {
     where
         T: de::DeserializeOwned,
     {
-        if !self.status().is_success() {
-            log::error!("Server responded with error");
-            return Err(Error::ServerUnavailable);
-        }
-        let (_, body) = self.into_parts();
+        let (parts, body) = self.into_parts();
         let body = hyper::body::to_bytes(body)
             .await
             .map_err(Error::ConnectionError)?;
-        let token = serde_json::from_slice(&body).map_err(Error::ParsingError)?;
 
+        if !parts.status.is_success() {
+            let error = format!(
+                "Server responded with error {}: {}",
+                parts.status,
+                String::from_utf8_lossy(body.as_ref())
+            );
+            log::error!("{}", error);
+            return Err(Error::ServerUnavailable(error));
+        }
+
+        let token = serde_json::from_slice(&body).map_err(Error::ParsingError)?;
         Ok(token)
     }
 }
