@@ -80,7 +80,7 @@ pub use types::Token;
 use std::path::Path;
 
 use hyper::Client;
-use hyper_rustls::HttpsConnector;
+use hyper_rustls::HttpsConnectorBuilder;
 
 /// Initialize GCP authentication based on a credentials file
 ///
@@ -95,11 +95,12 @@ async fn get_authentication_manager(
     credential_path: Option<&Path>,
 ) -> Result<AuthenticationManager, Error> {
     #[cfg(feature = "webpki-roots")]
-    let https = HttpsConnector::with_webpki_roots();
+    let https = HttpsConnectorBuilder::new().with_webpki_roots();
     #[cfg(not(feature = "webpki-roots"))]
-    let https = HttpsConnector::with_native_roots();
+    let https = HttpsConnectorBuilder::new().with_native_roots();
 
-    let client = Client::builder().build::<_, hyper::Body>(https);
+    let client =
+        Client::builder().build::<_, hyper::Body>(https.https_only().enable_http2().build());
 
     let custom = match credential_path {
         Some(path) => CustomServiceAccount::from_file(path).await,
