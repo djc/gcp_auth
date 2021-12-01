@@ -1,3 +1,5 @@
+use std::fmt::{self, Display};
+
 use chrono::{DateTime, Utc};
 use serde::Deserializer;
 use serde::{Deserialize, Serialize};
@@ -31,6 +33,12 @@ impl Token {
     /// Get expiry of token, if available
     pub fn expires_at(&self) -> Option<DateTime<Utc>> {
         self.expires_at
+    }
+}
+
+impl Display for Token {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.as_str())
     }
 }
 
