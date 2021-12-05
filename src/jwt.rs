@@ -4,7 +4,6 @@ use std::io;
 
 use rustls::{
     self,
-    internal::pemfile,
     sign::{self, SigningKey},
     PrivateKey,
 };
@@ -23,12 +22,12 @@ fn append_base64<T: AsRef<[u8]> + ?Sized>(s: &T, out: &mut String) {
 
 /// Decode a PKCS8 formatted RSA key.
 fn decode_rsa_key(pem_pkcs8: &str) -> Result<PrivateKey, io::Error> {
-    let private_keys = pemfile::pkcs8_private_keys(&mut pem_pkcs8.as_bytes());
+    let private_keys = rustls_pemfile::pkcs8_private_keys(&mut pem_pkcs8.as_bytes());
 
     match private_keys {
         Ok(mut keys) if !keys.is_empty() => {
             keys.truncate(1);
-            Ok(keys.remove(0))
+            Ok(PrivateKey(keys.remove(0)))
         }
         Ok(_) => Err(io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -89,14 +88,14 @@ pub(crate) struct JwtSigner {
 impl JwtSigner {
     pub(crate) fn new(private_key: &str) -> Result<Self, Error> {
         let key = decode_rsa_key(private_key)?;
-        let signing_key = sign::RSASigningKey::new(&key).map_err(|_| Error::SignerInit)?;
+        let signing_key = sign::RsaSigningKey::new(&key).map_err(|_| Error::SignerInit)?;
         let signer = signing_key
             .choose_scheme(&[rustls::SignatureScheme::RSA_PKCS1_SHA256])
             .ok_or(Error::SignerSchemeError)?;
         Ok(JwtSigner { signer })
     }
 
-    pub(crate) fn sign_claims(&self, claims: &Claims) -> Result<String, rustls::TLSError> {
+    pub(crate) fn sign_claims(&self, claims: &Claims) -> Result<String, rustls::Error> {
         let mut jwt_head = Self::encode_claims(claims);
         let signature = self.signer.sign(jwt_head.as_bytes())?;
         jwt_head.push('.');

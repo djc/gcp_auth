@@ -18,7 +18,7 @@ pub enum Error {
     /// Error in underlying RustTLS library.
     /// Might signal problem with establishing secure connection using trusted certificates
     #[error("TLS error")]
-    TLSError(rustls::TLSError),
+    TLSError(rustls::Error),
 
     /// Error when establishing connection to OAuth server
     #[error("Could not establish connection with OAuth server")]
