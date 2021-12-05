@@ -62,7 +62,7 @@ impl<'a> Claims<'a> {
     where
         T: std::string::ToString,
     {
-        let iat = chrono::Utc::now().timestamp();
+        let iat = time::OffsetDateTime::now_utc().unix_timestamp();
         let expiry = iat + 3600 - 5; // Max validity is 1h.
 
         let scope: String = scopes
