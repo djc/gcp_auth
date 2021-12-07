@@ -1,10 +1,20 @@
+use std::fmt;
+
 use serde::Deserializer;
 use serde::{Deserialize, Serialize};
 use time::{Duration, OffsetDateTime};
 
 /// Represents an access token. All access tokens are Bearer tokens.
-/// Token cannot be cached.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+///
+/// Tokens cannot be cached.
+///
+/// The token does not implement [`Display`] to avoid accidentally printing the token in log
+/// files, likewise [`Debug`] does not expose the token value itself which is only available
+/// using the [Token::`as_str`] method.
+///
+/// [`Display`]: fmt::Display
+/// [`Debug`]: fmt::Debug
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 pub struct Token {
     access_token: String,
     #[serde(
@@ -13,6 +23,15 @@ pub struct Token {
         rename(deserialize = "expires_in")
     )]
     expires_at: Option<OffsetDateTime>,
+}
+
+impl fmt::Debug for Token {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Token")
+            .field("access_token", &"****")
+            .field("expires_at", &self.expires_at)
+            .finish()
+    }
 }
 
 impl Token {
