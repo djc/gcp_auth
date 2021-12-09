@@ -36,6 +36,9 @@ impl fmt::Debug for Token {
 
 impl Token {
     /// Define if the token has has_expired
+    ///
+    /// This takes an additional 30s margin to ensure the token can still be reasonably used
+    /// instead of expiring right after having checked.
     pub fn has_expired(&self) -> bool {
         self.expires_at
             .map(|expiration_time| {
