@@ -15,6 +15,10 @@ use crate::util::HyperExt;
 #[derive(Debug)]
 pub(crate) struct DefaultAuthorizedUser {
     token: RwLock<Token>,
+    // In theory we should be able to use a single RwLock for this, but when refreshing we
+    // go across await points.  Always using a tokio RwLock is inefficient in the hot path
+    // though, so we have this brittle kludge of a mutex-held-by-convention.
+    refresh_mutex: tokio::sync::Mutex<()>,
 }
 
 impl DefaultAuthorizedUser {
@@ -24,7 +28,11 @@ impl DefaultAuthorizedUser {
 
     pub(crate) async fn new(client: &HyperClient) -> Result<Self, Error> {
         let token = RwLock::new(Self::get_token(client).await?);
-        Ok(Self { token })
+        let refresh_mutex = tokio::sync::Mutex::new(());
+        Ok(Self {
+            token,
+            refresh_mutex,
+        })
     }
 
     fn build_token_request<T: serde::Serialize>(json: &T) -> Request<Body> {
@@ -68,6 +76,13 @@ impl ServiceAccount for DefaultAuthorizedUser {
     }
 
     async fn refresh_token(&self, client: &HyperClient, _scopes: &[&str]) -> Result<Token, Error> {
+        let _guard = self.refresh_mutex.lock().await;
+        {
+            let token = self.token.read().unwrap();
+            if !token.has_expired() {
+                return Ok(token.clone());
+            }
+        }
         let token = Self::get_token(client).await?;
         *self.token.write().unwrap() = token.clone();
         Ok(token)
