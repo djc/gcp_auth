@@ -14,7 +14,7 @@ use crate::util::HyperExt;
 pub(crate) struct DefaultServiceAccount {
     token: RwLock<Token>,
     // In theory we should be able to use a single RwLock for this, but when refreshing we
-    // go accross await points.  Always using a tokio RwLock is inefficient in the hot path
+    // go across await points.  Always using a tokio RwLock is inefficient in the hot path
     // though, so we have this brittle kludge of a mutex-held-by-convention.
     refresh_mutex: tokio::sync::Mutex<()>,
 }
