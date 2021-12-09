@@ -13,6 +13,10 @@ use crate::util::HyperExt;
 #[derive(Debug)]
 pub(crate) struct DefaultServiceAccount {
     token: RwLock<Token>,
+    // In theory we should be able to use a single RwLock for this, but when refreshing we
+    // go accross await points.  Always using a tokio RwLock is inefficient in the hot path
+    // though, so we have this brittle kludge of a mutex-held-by-convention.
+    refresh_mutex: tokio::sync::Mutex<()>,
 }
 
 impl DefaultServiceAccount {
@@ -22,7 +26,11 @@ impl DefaultServiceAccount {
 
     pub(crate) async fn new(client: &HyperClient) -> Result<Self, Error> {
         let token = RwLock::new(Self::get_token(client).await?);
-        Ok(Self { token })
+        let refresh_mutex = tokio::sync::Mutex::new(());
+        Ok(Self {
+            token,
+            refresh_mutex,
+        })
     }
 
     fn build_token_request(uri: &str) -> Request<Body> {
@@ -35,6 +43,7 @@ impl DefaultServiceAccount {
     }
 
     async fn get_token(client: &HyperClient) -> Result<Token, Error> {
+        // TODO: This should retry with capped exponential backoff.
         log::debug!("Getting token from GCP instance metadata server");
         let req = Self::build_token_request(Self::DEFAULT_TOKEN_GCP_URI);
         let token = client
@@ -69,6 +78,13 @@ impl ServiceAccount for DefaultServiceAccount {
     }
 
     async fn refresh_token(&self, client: &HyperClient, _scopes: &[&str]) -> Result<Token, Error> {
+        let _guard = self.refresh_mutex.lock().await;
+        {
+            let token = self.token.read().unwrap();
+            if !token.has_expired() {
+                return Ok(token.clone());
+            }
+        }
         let token = Self::get_token(client).await?;
         *self.token.write().unwrap() = token.clone();
         Ok(token)
