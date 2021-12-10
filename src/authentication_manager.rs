@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use tokio::sync::Mutex;
 
 use crate::error::Error;
 use crate::types::{HyperClient, Token};
@@ -16,9 +17,18 @@ pub(crate) trait ServiceAccount: Send + Sync {
 pub struct AuthenticationManager {
     pub(crate) client: HyperClient,
     pub(crate) service_account: Box<dyn ServiceAccount>,
+    refresh_mutex: Mutex<()>,
 }
 
 impl AuthenticationManager {
+    pub(crate) fn new(client: HyperClient, service_account: Box<dyn ServiceAccount>) -> Self {
+        Self {
+            client,
+            service_account,
+            refresh_mutex: Mutex::new(()),
+        }
+    }
+
     /// Requests Bearer token for the provided scope
     ///
     /// Token can be used in the request authorization header in format "Bearer {token}"
@@ -27,6 +37,15 @@ impl AuthenticationManager {
         if let Some(token) = token.filter(|token| !token.has_expired()) {
             return Ok(token);
         }
+
+        let _guard = self.refresh_mutex.lock().await;
+
+        // Check if refresh happened while we were waiting.
+        let token = self.service_account.get_token(scopes);
+        if let Some(token) = token.filter(|token| !token.has_expired()) {
+            return Ok(token);
+        }
+
         self.service_account
             .refresh_token(&self.client, scopes)
             .await

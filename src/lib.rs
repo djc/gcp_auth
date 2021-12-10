@@ -111,31 +111,28 @@ async fn get_authentication_manager(
     };
 
     if let Ok(service_account) = custom {
-        return Ok(AuthenticationManager {
+        return Ok(AuthenticationManager::new(
             client,
-            service_account: Box::new(service_account),
-        });
+            Box::new(service_account),
+        ));
     }
     let gcloud = gcloud_authorized_user::GCloudAuthorizedUser::new().await;
     if let Ok(service_account) = gcloud {
-        return Ok(AuthenticationManager {
-            client: client.clone(),
-            service_account: Box::new(service_account),
-        });
+        return Ok(AuthenticationManager::new(
+            client.clone(),
+            Box::new(service_account),
+        ));
     }
     let default = default_service_account::DefaultServiceAccount::new(&client).await;
     if let Ok(service_account) = default {
-        return Ok(AuthenticationManager {
-            client: client.clone(),
-            service_account: Box::new(service_account),
-        });
+        return Ok(AuthenticationManager::new(
+            client.clone(),
+            Box::new(service_account),
+        ));
     }
     let user = default_authorized_user::DefaultAuthorizedUser::new(&client).await;
     if let Ok(user_account) = user {
-        return Ok(AuthenticationManager {
-            client,
-            service_account: Box::new(user_account),
-        });
+        return Ok(AuthenticationManager::new(client, Box::new(user_account)));
     }
     Err(Error::NoAuthMethod(
         Box::new(custom.unwrap_err()),
