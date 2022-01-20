@@ -105,12 +105,16 @@ async fn get_authentication_manager(
     let custom = match credential_path {
         Some(path) => CustomServiceAccount::from_file(path).await,
         None => match std::env::var("GOOGLE_APPLICATION_CREDENTIALS") {
-            Ok(path) => CustomServiceAccount::from_file(Path::new(&path)).await,
+            Ok(path) => {
+                log::debug!("Trying GOOGLE_APPLICATION_CREDENTIALS env var");
+                CustomServiceAccount::from_file(Path::new(&path)).await
+            }
             Err(_) => Err(Error::ApplicationProfileMissing),
         },
     };
 
     if let Ok(service_account) = custom {
+        log::debug!("Using CustomServiceAccount");
         return Ok(AuthenticationManager::new(
             client,
             Box::new(service_account),
@@ -118,6 +122,7 @@ async fn get_authentication_manager(
     }
     let gcloud = gcloud_authorized_user::GCloudAuthorizedUser::new().await;
     if let Ok(service_account) = gcloud {
+        log::debug!("Using GCloudAuthorizedUser");
         return Ok(AuthenticationManager::new(
             client.clone(),
             Box::new(service_account),
@@ -125,6 +130,7 @@ async fn get_authentication_manager(
     }
     let default = default_service_account::DefaultServiceAccount::new(&client).await;
     if let Ok(service_account) = default {
+        log::debug!("Using DefaultServiceAccount");
         return Ok(AuthenticationManager::new(
             client.clone(),
             Box::new(service_account),
@@ -132,6 +138,7 @@ async fn get_authentication_manager(
     }
     let user = default_authorized_user::DefaultAuthorizedUser::new(&client).await;
     if let Ok(user_account) = user {
+        log::debug!("Using DefaultAuthorizedUser");
         return Ok(AuthenticationManager::new(client, Box::new(user_account)));
     }
     Err(Error::NoAuthMethod(
@@ -145,5 +152,6 @@ async fn get_authentication_manager(
 ///
 /// Returns `AuthenticationManager` which can be used to obtain tokens
 pub async fn init() -> Result<AuthenticationManager, Error> {
+    log::debug!("Initializing gcp_auth");
     get_authentication_manager(None).await
 }
