@@ -18,15 +18,15 @@ pub enum Error {
     /// Error in underlying RustTLS library.
     /// Might signal problem with establishing secure connection using trusted certificates
     #[error("TLS error")]
-    TLSError(rustls::Error),
+    TLSError(#[source] rustls::Error),
 
     /// Error when establishing connection to OAuth server
     #[error("Could not establish connection with OAuth server")]
-    OAuthConnectionError(hyper::Error),
+    OAuthConnectionError(#[source] hyper::Error),
 
     /// Error when parsing response from OAuth server
     #[error("Could not parse OAuth server response")]
-    OAuthParsingError(serde_json::error::Error),
+    OAuthParsingError(#[source] serde_json::error::Error),
 
     /// Variable `GOOGLE_APPLICATION_CREDENTIALS` could not be found in the current environment
     ///
@@ -39,33 +39,33 @@ pub enum Error {
     ///
     /// Path has to be defined using `GOOGLE_APPLICATION_CREDENTIALS` environment variable
     #[error("Environment variable `GOOGLE_APPLICATION_CREDENTIALS` contains invalid path to application profile file")]
-    ApplicationProfilePath(std::io::Error),
+    ApplicationProfilePath(#[source] std::io::Error),
 
     /// Wrong format of custom application profile
     ///
     /// Application profile is downloaded from GCP console and is stored in filesystem on the server.
     /// Full path is passed to library by setting `GOOGLE_APPLICATION_CREDENTIALS` variable with path as a value.
     #[error("Application profile provided in `GOOGLE_APPLICATION_CREDENTIALS` was not parsable")]
-    ApplicationProfileFormat(serde_json::error::Error),
+    ApplicationProfileFormat(#[source] serde_json::error::Error),
 
     /// Default user profile not found
     ///
     /// User can authenticate locally during development using `gcloud auth login` which results in creating
     /// `~/.config/gcloud/application_default_credentials.json` which couldn't be find on the machine
     #[error("User authentication profile not found")]
-    UserProfilePath(std::io::Error),
+    UserProfilePath(#[source] std::io::Error),
 
     /// Wrong format of user profile
     #[error("User profile was not parsable")]
-    UserProfileFormat(serde_json::error::Error),
+    UserProfileFormat(#[source] serde_json::error::Error),
 
     /// Could not connect to  server
     #[error("Could not establish connection with server")]
-    ConnectionError(hyper::Error),
+    ConnectionError(#[source] hyper::Error),
 
     /// Could not parse response from server
     #[error("Could not parse server response")]
-    ParsingError(serde_json::error::Error),
+    ParsingError(#[source] serde_json::error::Error),
 
     /// Could not connect to server
     #[error("Server unavailable: {0}")]
