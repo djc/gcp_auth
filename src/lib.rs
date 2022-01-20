@@ -100,7 +100,7 @@ async fn get_authentication_manager(
     let https = HttpsConnectorBuilder::new().with_native_roots();
 
     let client =
-        Client::builder().build::<_, hyper::Body>(https.https_only().enable_http2().build());
+        Client::builder().build::<_, hyper::Body>(https.https_or_http().enable_http2().build());
 
     let custom = match credential_path {
         Some(path) => CustomServiceAccount::from_file(path).await,
