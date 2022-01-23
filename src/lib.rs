@@ -82,17 +82,26 @@ use std::path::Path;
 use hyper::Client;
 use hyper_rustls::HttpsConnectorBuilder;
 
-/// Initialize GCP authentication based on a credentials file
+/// Initialize GCP authentication based on a credentials file path
 ///
 /// Returns `AuthenticationManager` which can be used to obtain tokens
 pub async fn from_credentials_file<T: AsRef<Path>>(
     path: T,
 ) -> Result<AuthenticationManager, Error> {
-    get_authentication_manager(Some(path.as_ref())).await
+    let custom = CustomServiceAccount::from_file(path.as_ref()).await?;
+    get_authentication_manager(Some(custom)).await
+}
+
+/// Initialize GCP authentication based on a JSON string
+///
+/// Returns `AuthenticationManager` which can be used to obtain tokens
+pub async fn from_credentials_json(s: &str) -> Result<AuthenticationManager, Error> {
+    let custom = CustomServiceAccount::from_json(s)?;
+    get_authentication_manager(Some(custom)).await
 }
 
 async fn get_authentication_manager(
-    credential_path: Option<&Path>,
+    custom: Option<CustomServiceAccount>,
 ) -> Result<AuthenticationManager, Error> {
     #[cfg(feature = "webpki-roots")]
     let https = HttpsConnectorBuilder::new().with_webpki_roots();
@@ -102,18 +111,7 @@ async fn get_authentication_manager(
     let client =
         Client::builder().build::<_, hyper::Body>(https.https_or_http().enable_http2().build());
 
-    let custom = match credential_path {
-        Some(path) => CustomServiceAccount::from_file(path).await,
-        None => match std::env::var("GOOGLE_APPLICATION_CREDENTIALS") {
-            Ok(path) => {
-                log::debug!("Trying GOOGLE_APPLICATION_CREDENTIALS env var");
-                CustomServiceAccount::from_file(Path::new(&path)).await
-            }
-            Err(_) => Err(Error::ApplicationProfileMissing),
-        },
-    };
-
-    if let Ok(service_account) = custom {
+    if let Some(service_account) = custom {
         log::debug!("Using CustomServiceAccount");
         return Ok(AuthenticationManager::new(
             client,
@@ -142,7 +140,6 @@ async fn get_authentication_manager(
         return Ok(AuthenticationManager::new(client, Box::new(user_account)));
     }
     Err(Error::NoAuthMethod(
-        Box::new(custom.unwrap_err()),
         Box::new(gcloud.unwrap_err()),
         Box::new(default.unwrap_err()),
         Box::new(user.unwrap_err()),
@@ -153,5 +150,19 @@ async fn get_authentication_manager(
 /// Returns `AuthenticationManager` which can be used to obtain tokens
 pub async fn init() -> Result<AuthenticationManager, Error> {
     log::debug!("Initializing gcp_auth");
-    get_authentication_manager(None).await
+
+    // will return an error if the environment variable isn’t set, in which case custom is set to
+    // none.
+    let custom = match std::env::var("GOOGLE_APPLICATION_CREDENTIALS") {
+        Ok(path) => {
+            log::debug!("Reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var");
+
+            // We know that GOOGLE_APPLICATION_CREDENTIALS exists, read the file and return an
+            // error in case of failure.
+            Some(CustomServiceAccount::from_file(Path::new(&path)).await?)
+        }
+        Err(_) => None,
+    };
+
+    get_authentication_manager(custom).await
 }

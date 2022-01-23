@@ -7,13 +7,12 @@ pub enum Error {
     /// Application can authenticate against GCP using:
     ///
     /// - Default service account - available inside GCP platform using GCP Instance Metadata server
-    /// - Service account file - provided using `GOOGLE_APPLICATION_CREDENTIALS` with path
     /// - GCloud authorized user - retrieved using `gcloud auth` command
     ///
     /// All authentication methods have been tested and none succeeded.
     /// Service account file can be downloaded from GCP in json format.
     #[error("No available authentication method was discovered")]
-    NoAuthMethod(Box<Error>, Box<Error>, Box<Error>, Box<Error>),
+    NoAuthMethod(Box<Error>, Box<Error>, Box<Error>),
 
     /// Error in underlying RustTLS library.
     /// Might signal problem with establishing secure connection using trusted certificates
