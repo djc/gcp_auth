@@ -106,7 +106,7 @@ impl ApplicationCredentials {
         let content = fs::read_to_string(path)
             .await
             .map_err(Error::ApplicationProfilePath)?;
-        Ok(serde_json::from_str(&content).map_err(Error::ApplicationProfileFormat)?)
+        ApplicationCredentials::from_json(&content)
     }
 
     fn from_json(s: &str) -> Result<ApplicationCredentials, Error> {
