@@ -57,15 +57,27 @@ impl<'a> Claims<'a> {
             scope,
         }
     }
+
+    pub(crate) fn to_jwt(&self, signer: &Signer) -> Result<String, Error> {
+        let mut jwt = String::new();
+        append_base64(GOOGLE_RS256_HEAD, &mut jwt);
+        jwt.push('.');
+        append_base64(&serde_json::to_string(self).unwrap(), &mut jwt);
+
+        let signature = signer.sign(jwt.as_bytes())?;
+        jwt.push('.');
+        append_base64(&signature, &mut jwt);
+        Ok(jwt)
+    }
 }
 
 /// A JSON Web Token ready for signing.
-pub(crate) struct JwtSigner {
+pub(crate) struct Signer {
     key: RsaKeyPair,
     rng: SystemRandom,
 }
 
-impl JwtSigner {
+impl Signer {
     pub(crate) fn new(pem_pkcs8: &str) -> Result<Self, Error> {
         let private_keys = rustls_pemfile::pkcs8_private_keys(&mut pem_pkcs8.as_bytes());
 
@@ -90,37 +102,17 @@ impl JwtSigner {
             }
         };
 
-        Ok(JwtSigner {
+        Ok(Signer {
             key: RsaKeyPair::from_pkcs8(&key).map_err(|_| Error::SignerInit)?,
             rng: SystemRandom::new(),
         })
     }
 
-    pub(crate) fn sign_claims(&self, claims: &Claims) -> Result<String, Error> {
-        let mut jwt_head = Self::encode_claims(claims);
-
+    pub(crate) fn sign(&self, input: &[u8]) -> Result<Vec<u8>, Error> {
         let mut signature = vec![0; self.key.public_modulus_len()];
         self.key
-            .sign(
-                &RSA_PKCS1_SHA256,
-                &self.rng,
-                jwt_head.as_bytes(),
-                &mut signature,
-            )
+            .sign(&RSA_PKCS1_SHA256, &self.rng, input, &mut signature)
             .map_err(|_| Error::SignerFailed)?;
-
-        jwt_head.push('.');
-        append_base64(&signature, &mut jwt_head);
-        Ok(jwt_head)
-    }
-
-    /// Encodes the first two parts (header and claims) to base64 and assembles them into a form
-    /// ready to be signed.
-    fn encode_claims(claims: &Claims) -> String {
-        let mut head = String::new();
-        append_base64(GOOGLE_RS256_HEAD, &mut head);
-        head.push('.');
-        append_base64(&serde_json::to_string(&claims).unwrap(), &mut head);
-        head
+        Ok(signature)
     }
 }

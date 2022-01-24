@@ -73,22 +73,22 @@ impl ServiceAccount for CustomServiceAccount {
 
     async fn refresh_token(&self, client: &HyperClient, scopes: &[&str]) -> Result<Token, Error> {
         use crate::jwt::Claims;
-        use crate::jwt::JwtSigner;
+        use crate::jwt::Signer;
         use crate::jwt::GRANT_TYPE;
         use hyper::header;
         use url::form_urlencoded;
 
-        let signer = JwtSigner::new(&self.credentials.private_key)?;
-
-        let claims = Claims::new(&self.credentials, scopes, None);
-        let signed = signer.sign_claims(&claims)?;
+        let signer = Signer::new(&self.credentials.private_key)?;
+        let jwt = Claims::new(&self.credentials, scopes, None).to_jwt(&signer)?;
         let rqbody = form_urlencoded::Serializer::new(String::new())
-            .extend_pairs(&[("grant_type", GRANT_TYPE), ("assertion", signed.as_str())])
+            .extend_pairs(&[("grant_type", GRANT_TYPE), ("assertion", jwt.as_str())])
             .finish();
+
         let request = hyper::Request::post(&self.credentials.token_uri)
             .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
             .body(hyper::Body::from(rqbody))
             .unwrap();
+
         log::debug!("requesting token from service account: {:?}", request);
         let token = client
             .request(request)
@@ -96,6 +96,7 @@ impl ServiceAccount for CustomServiceAccount {
             .map_err(Error::OAuthConnectionError)?
             .deserialize::<Token>()
             .await?;
+
         let key = scopes.iter().map(|x| (*x).to_string()).collect();
         self.tokens.write().unwrap().insert(key, token.clone());
         Ok(token)
