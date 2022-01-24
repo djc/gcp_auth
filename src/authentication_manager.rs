@@ -29,7 +29,19 @@ impl AuthenticationManager {
         Self::build(types::client(), service_account)
     }
 
-    pub(crate) async fn new() -> Result<Self, Error> {
+    /// Finds a service account provider to get authentication tokens from
+    ///
+    /// Tries the following approaches, in order:
+    ///
+    /// 1. Check if the `GOOGLE_APPLICATION_CREDENTIALS` environment variable if set;
+    ///    if so, use a custom service account as the token source.
+    /// 2. Check if the `gcloud` tool is available on the `PATH`; if so, use the
+    ///    `gcloud auth print-access-token` command as the token source.
+    /// 3. Send a HTTP request to the internal metadata server to retrieve a token;
+    ///    if it succeeds, use the default service account as the token source.
+    /// 4. Look for credentials in `.config/gcloud/application_default_credentials.json`;
+    ///    if found, use these credentials to request refresh tokens.
+    pub async fn new() -> Result<Self, Error> {
         log::debug!("Initializing gcp_auth");
         if let Some(service_account) = CustomServiceAccount::from_env()? {
             return Ok(Self::from_custom_service_account(service_account));

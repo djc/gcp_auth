@@ -98,7 +98,7 @@ pub fn from_credentials_json(s: &str) -> Result<AuthenticationManager, Error> {
 
 /// Initialize GCP authentication
 ///
-/// Returns `AuthenticationManager` which can be used to obtain tokens
+/// This is a convenience wrapper around [`AuthenticationManager::new()`].
 pub async fn init() -> Result<AuthenticationManager, Error> {
     AuthenticationManager::new().await
 }
