@@ -1,6 +1,8 @@
 use std::fmt;
 use std::sync::Arc;
 
+use hyper::Client;
+use hyper_rustls::HttpsConnectorBuilder;
 use serde::Deserializer;
 use serde::{Deserialize, Serialize};
 use time::{Duration, OffsetDateTime};
@@ -76,6 +78,15 @@ where
     let s =
         s.map(|seconds_from_now| OffsetDateTime::now_utc() + Duration::seconds(seconds_from_now));
     Ok(s)
+}
+
+pub(crate) fn client() -> HyperClient {
+    #[cfg(feature = "webpki-roots")]
+    let https = HttpsConnectorBuilder::new().with_webpki_roots();
+    #[cfg(not(feature = "webpki-roots"))]
+    let https = HttpsConnectorBuilder::new().with_native_roots();
+
+    Client::builder().build::<_, hyper::Body>(https.https_or_http().enable_http2().build())
 }
 
 pub(crate) type HyperClient =

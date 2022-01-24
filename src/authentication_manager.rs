@@ -1,6 +1,4 @@
 use async_trait::async_trait;
-use hyper::Client;
-use hyper_rustls::HttpsConnectorBuilder;
 use tokio::sync::Mutex;
 
 use crate::custom_service_account::CustomServiceAccount;
@@ -8,7 +6,7 @@ use crate::default_authorized_user::DefaultAuthorizedUser;
 use crate::default_service_account::DefaultServiceAccount;
 use crate::error::Error;
 use crate::gcloud_authorized_user::GCloudAuthorizedUser;
-use crate::types::{HyperClient, Token};
+use crate::types::{self, HyperClient, Token};
 
 #[async_trait]
 pub(crate) trait ServiceAccount: Send + Sync {
@@ -30,13 +28,7 @@ impl AuthenticationManager {
     pub(crate) async fn select(
         custom: Option<CustomServiceAccount>,
     ) -> Result<AuthenticationManager, Error> {
-        #[cfg(feature = "webpki-roots")]
-        let https = HttpsConnectorBuilder::new().with_webpki_roots();
-        #[cfg(not(feature = "webpki-roots"))]
-        let https = HttpsConnectorBuilder::new().with_native_roots();
-
-        let client =
-            Client::builder().build::<_, hyper::Body>(https.https_or_http().enable_http2().build());
+        let client = types::client();
 
         if let Some(service_account) = custom {
             log::debug!("Using CustomServiceAccount");
@@ -46,7 +38,7 @@ impl AuthenticationManager {
         let gcloud_error = match GCloudAuthorizedUser::new() {
             Ok(service_account) => {
                 log::debug!("Using GCloudAuthorizedUser");
-                return Ok(Self::new(client.clone(), service_account));
+                return Ok(Self::new(client, service_account));
             }
             Err(e) => e,
         };
@@ -54,7 +46,7 @@ impl AuthenticationManager {
         let default_service_error = match DefaultServiceAccount::new(&client).await {
             Ok(service_account) => {
                 log::debug!("Using DefaultServiceAccount");
-                return Ok(Self::new(client.clone(), service_account));
+                return Ok(Self::new(client, service_account));
             }
             Err(e) => e,
         };
