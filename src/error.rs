@@ -34,18 +34,19 @@ pub enum Error {
     #[error("Path to custom auth credentials was not provided in `GOOGLE_APPLICATION_CREDENTIALS` env variable")]
     ApplicationProfileMissing,
 
-    /// Wrong path to custom application profile credentials provided
+    /// Wrong path to custom service account credentials provided
     ///
-    /// Path has to be defined using `GOOGLE_APPLICATION_CREDENTIALS` environment variable
-    #[error("Environment variable `GOOGLE_APPLICATION_CREDENTIALS` contains invalid path to application profile file")]
-    ApplicationProfilePath(#[source] std::io::Error),
+    /// By default, the custom service account credentials are parsed from the path pointed to by the
+    /// `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
+    #[error("Invalid path to custom service account")]
+    CustomServiceAccountPath(#[source] std::io::Error),
 
-    /// Wrong format of custom application profile
+    /// Failed to parse the application credentials provided
     ///
-    /// Application profile is downloaded from GCP console and is stored in filesystem on the server.
-    /// Full path is passed to library by setting `GOOGLE_APPLICATION_CREDENTIALS` variable with path as a value.
+    /// By default, the custom service account credentials are parsed from the path pointed to by the
+    /// `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
     #[error("Application profile provided in `GOOGLE_APPLICATION_CREDENTIALS` was not parsable")]
-    ApplicationProfileFormat(#[source] serde_json::error::Error),
+    CustomServiceAccountCredentials(#[source] serde_json::error::Error),
 
     /// Default user profile not found
     ///
