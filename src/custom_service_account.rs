@@ -24,6 +24,13 @@ impl CustomServiceAccount {
             tokens: RwLock::new(HashMap::new()),
         })
     }
+
+    pub(crate) fn from_json(s: &str) -> Result<Self, Error> {
+        Ok(Self {
+            credentials: ApplicationCredentials::from_json(s)?,
+            tokens: RwLock::new(HashMap::new()),
+        })
+    }
 }
 
 #[async_trait]
@@ -99,6 +106,10 @@ impl ApplicationCredentials {
         let content = fs::read_to_string(path)
             .await
             .map_err(Error::ApplicationProfilePath)?;
-        Ok(serde_json::from_str(&content).map_err(Error::ApplicationProfileFormat)?)
+        ApplicationCredentials::from_json(&content)
+    }
+
+    fn from_json(s: &str) -> Result<ApplicationCredentials, Error> {
+        serde_json::from_str(s).map_err(Error::ApplicationProfileFormat)
     }
 }
