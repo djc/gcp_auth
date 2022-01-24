@@ -2,10 +2,9 @@
 
 use std::io;
 
-use rustls::{
-    self,
-    sign::{self, SigningKey},
-    PrivateKey,
+use ring::{
+    rand::SystemRandom,
+    signature::{RsaKeyPair, RSA_PKCS1_SHA256},
 };
 use serde::Serialize;
 
@@ -62,7 +61,8 @@ impl<'a> Claims<'a> {
 
 /// A JSON Web Token ready for signing.
 pub(crate) struct JwtSigner {
-    signer: Box<dyn rustls::sign::Signer>,
+    key: RsaKeyPair,
+    rng: SystemRandom,
 }
 
 impl JwtSigner {
@@ -72,7 +72,7 @@ impl JwtSigner {
         let key = match private_keys {
             Ok(mut keys) if !keys.is_empty() => {
                 keys.truncate(1);
-                PrivateKey(keys.remove(0))
+                keys.remove(0)
             }
             Ok(_) => {
                 return Err(io::Error::new(
@@ -90,16 +90,25 @@ impl JwtSigner {
             }
         };
 
-        let signing_key = sign::RsaSigningKey::new(&key).map_err(|_| Error::SignerInit)?;
-        match signing_key.choose_scheme(&[rustls::SignatureScheme::RSA_PKCS1_SHA256]) {
-            Some(signer) => Ok(JwtSigner { signer }),
-            None => return Err(Error::SignerSchemeError),
-        }
+        Ok(JwtSigner {
+            key: RsaKeyPair::from_pkcs8(&key).map_err(|_| Error::SignerInit)?,
+            rng: SystemRandom::new(),
+        })
     }
 
-    pub(crate) fn sign_claims(&self, claims: &Claims) -> Result<String, rustls::Error> {
+    pub(crate) fn sign_claims(&self, claims: &Claims) -> Result<String, Error> {
         let mut jwt_head = Self::encode_claims(claims);
-        let signature = self.signer.sign(jwt_head.as_bytes())?;
+
+        let mut signature = vec![0; self.key.public_modulus_len()];
+        self.key
+            .sign(
+                &RSA_PKCS1_SHA256,
+                &self.rng,
+                jwt_head.as_bytes(),
+                &mut signature,
+            )
+            .map_err(|_| Error::SignerFailed)?;
+
         jwt_head.push('.');
         append_base64(&signature, &mut jwt_head);
         Ok(jwt_head)
