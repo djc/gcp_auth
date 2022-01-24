@@ -71,8 +71,8 @@ mod jwt;
 mod types;
 mod util;
 
-use custom_service_account::CustomServiceAccount;
 pub use authentication_manager::AuthenticationManager;
+use custom_service_account::CustomServiceAccount;
 pub use error::Error;
 pub use types::Token;
 
@@ -104,16 +104,15 @@ pub async fn init() -> Result<AuthenticationManager, Error> {
 
     // will return an error if the environment variable isn’t set, in which case custom is set to
     // none.
-    let custom = match std::env::var("GOOGLE_APPLICATION_CREDENTIALS") {
-        Ok(path) => {
+    let custom = std::env::var_os("GOOGLE_APPLICATION_CREDENTIALS")
+        .and_then(|path| {
             log::debug!("Reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var");
 
             // We know that GOOGLE_APPLICATION_CREDENTIALS exists, read the file and return an
             // error in case of failure.
-            Some(CustomServiceAccount::from_file(Path::new(&path))?)
-        }
-        Err(_) => None,
-    };
+            Some(CustomServiceAccount::from_file(Path::new(&path)))
+        })
+        .transpose()?;
 
     AuthenticationManager::select(custom).await
 }
