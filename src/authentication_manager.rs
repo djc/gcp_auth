@@ -25,7 +25,8 @@ pub struct AuthenticationManager {
 }
 
 impl AuthenticationManager {
-    pub(crate) fn from_custom_service_account(service_account: CustomServiceAccount) -> Self {
+    /// Create an `AuthenticationManager` directly from a custom service account
+    pub fn from_custom_service_account(service_account: CustomServiceAccount) -> Self {
         Self::build(types::client(), service_account)
     }
 
@@ -114,5 +115,11 @@ impl AuthenticationManager {
     /// This is only available for service account-based authentication methods.
     pub async fn project_id(&self) -> Result<String, Error> {
         self.service_account.project_id(&self.client).await
+    }
+}
+
+impl From<CustomServiceAccount> for AuthenticationManager {
+    fn from(service_account: CustomServiceAccount) -> Self {
+        Self::from_custom_service_account(service_account)
     }
 }

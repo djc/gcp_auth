@@ -72,29 +72,9 @@ mod types;
 mod util;
 
 pub use authentication_manager::AuthenticationManager;
-use custom_service_account::CustomServiceAccount;
+pub use custom_service_account::CustomServiceAccount;
 pub use error::Error;
 pub use types::Token;
-
-use std::path::Path;
-
-/// Initialize GCP authentication based on a credentials file path
-///
-/// Returns `AuthenticationManager` which can be used to obtain tokens
-pub fn from_credentials_file<T: AsRef<Path>>(path: T) -> Result<AuthenticationManager, Error> {
-    Ok(AuthenticationManager::from_custom_service_account(
-        CustomServiceAccount::from_file(path.as_ref())?,
-    ))
-}
-
-/// Initialize GCP authentication based on a JSON string
-///
-/// Returns `AuthenticationManager` which can be used to obtain tokens
-pub fn from_credentials_json(s: &str) -> Result<AuthenticationManager, Error> {
-    Ok(AuthenticationManager::from_custom_service_account(
-        CustomServiceAccount::from_json(s)?,
-    ))
-}
 
 /// Initialize GCP authentication
 ///

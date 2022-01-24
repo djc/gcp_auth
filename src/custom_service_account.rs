@@ -10,14 +10,16 @@ use crate::error::Error;
 use crate::types::{HyperClient, Token};
 use crate::util::HyperExt;
 
+/// A custom service account containing credentials
 #[derive(Debug)]
-pub(crate) struct CustomServiceAccount {
+pub struct CustomServiceAccount {
     tokens: RwLock<HashMap<Vec<String>, Token>>,
     credentials: ApplicationCredentials,
 }
 
 impl CustomServiceAccount {
-    pub(crate) fn from_env() -> Result<Option<Self>, Error> {
+    /// Check `GOOGLE_APPLICATION_CREDENTIALS` environment variable for a path to JSON credentials
+    pub fn from_env() -> Result<Option<Self>, Error> {
         std::env::var_os("GOOGLE_APPLICATION_CREDENTIALS")
             .map(|path| {
                 log::debug!("Reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var");
@@ -26,8 +28,9 @@ impl CustomServiceAccount {
             .transpose()
     }
 
-    pub(crate) fn from_file(path: &Path) -> Result<Self, Error> {
-        let file = std::fs::File::open(path).map_err(Error::CustomServiceAccountPath)?;
+    /// Read service account credentials from the given JSON file
+    pub fn from_file<T: AsRef<Path>>(path: T) -> Result<Self, Error> {
+        let file = std::fs::File::open(path.as_ref()).map_err(Error::CustomServiceAccountPath)?;
         Ok(Self {
             credentials: serde_json::from_reader(file)
                 .map_err(Error::CustomServiceAccountCredentials)?,
@@ -35,7 +38,8 @@ impl CustomServiceAccount {
         })
     }
 
-    pub(crate) fn from_json(s: &str) -> Result<Self, Error> {
+    /// Read service account credentials from the given JSON string
+    pub fn from_json(s: &str) -> Result<Self, Error> {
         Ok(Self {
             credentials: serde_json::from_str(s).map_err(Error::CustomServiceAccountCredentials)?,
             tokens: RwLock::new(HashMap::new()),
