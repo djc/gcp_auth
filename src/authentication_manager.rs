@@ -43,28 +43,34 @@ impl AuthenticationManager {
             return Ok(Self::new(client, service_account));
         }
 
-        let gcloud = GCloudAuthorizedUser::new();
-        if let Ok(service_account) = gcloud {
-            log::debug!("Using GCloudAuthorizedUser");
-            return Ok(Self::new(client.clone(), service_account));
-        }
+        let gcloud_error = match GCloudAuthorizedUser::new() {
+            Ok(service_account) => {
+                log::debug!("Using GCloudAuthorizedUser");
+                return Ok(Self::new(client.clone(), service_account));
+            }
+            Err(e) => e,
+        };
 
-        let default = DefaultServiceAccount::new(&client).await;
-        if let Ok(service_account) = default {
-            log::debug!("Using DefaultServiceAccount");
-            return Ok(Self::new(client.clone(), service_account));
-        }
+        let default_service_error = match DefaultServiceAccount::new(&client).await {
+            Ok(service_account) => {
+                log::debug!("Using DefaultServiceAccount");
+                return Ok(Self::new(client.clone(), service_account));
+            }
+            Err(e) => e,
+        };
 
-        let user = DefaultAuthorizedUser::new(&client).await;
-        if let Ok(user_account) = user {
-            log::debug!("Using DefaultAuthorizedUser");
-            return Ok(Self::new(client, user_account));
-        }
+        let default_user_error = match DefaultAuthorizedUser::new(&client).await {
+            Ok(service_account) => {
+                log::debug!("Using DefaultAuthorizedUser");
+                return Ok(Self::new(client, service_account));
+            }
+            Err(e) => e,
+        };
 
         Err(Error::NoAuthMethod(
-            Box::new(gcloud.unwrap_err()),
-            Box::new(default.unwrap_err()),
-            Box::new(user.unwrap_err()),
+            Box::new(gcloud_error),
+            Box::new(default_service_error),
+            Box::new(default_user_error),
         ))
     }
 
