@@ -25,15 +25,12 @@ pub struct AuthenticationManager {
 }
 
 impl AuthenticationManager {
-    pub(crate) async fn select(
-        custom: Option<CustomServiceAccount>,
-    ) -> Result<AuthenticationManager, Error> {
-        let client = types::client();
+    pub(crate) fn from_custom_service_account(service_account: CustomServiceAccount) -> Self {
+        Self::new(types::client(), service_account)
+    }
 
-        if let Some(service_account) = custom {
-            log::debug!("Using CustomServiceAccount");
-            return Ok(Self::new(client, service_account));
-        }
+    pub(crate) async fn select() -> Result<AuthenticationManager, Error> {
+        let client = types::client();
 
         let gcloud_error = match GCloudAuthorizedUser::new() {
             Ok(service_account) => {
