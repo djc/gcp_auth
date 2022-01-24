@@ -1,7 +1,13 @@
 use async_trait::async_trait;
+use hyper::Client;
+use hyper_rustls::HttpsConnectorBuilder;
 use tokio::sync::Mutex;
 
+use crate::custom_service_account::CustomServiceAccount;
+use crate::default_authorized_user::DefaultAuthorizedUser;
+use crate::default_service_account::DefaultServiceAccount;
 use crate::error::Error;
+use crate::gcloud_authorized_user::GCloudAuthorizedUser;
 use crate::types::{HyperClient, Token};
 
 #[async_trait]
@@ -21,10 +27,51 @@ pub struct AuthenticationManager {
 }
 
 impl AuthenticationManager {
-    pub(crate) fn new(client: HyperClient, service_account: Box<dyn ServiceAccount>) -> Self {
+    pub(crate) async fn select(
+        custom: Option<CustomServiceAccount>,
+    ) -> Result<AuthenticationManager, Error> {
+        #[cfg(feature = "webpki-roots")]
+        let https = HttpsConnectorBuilder::new().with_webpki_roots();
+        #[cfg(not(feature = "webpki-roots"))]
+        let https = HttpsConnectorBuilder::new().with_native_roots();
+
+        let client =
+            Client::builder().build::<_, hyper::Body>(https.https_or_http().enable_http2().build());
+
+        if let Some(service_account) = custom {
+            log::debug!("Using CustomServiceAccount");
+            return Ok(Self::new(client, service_account));
+        }
+
+        let gcloud = GCloudAuthorizedUser::new().await;
+        if let Ok(service_account) = gcloud {
+            log::debug!("Using GCloudAuthorizedUser");
+            return Ok(Self::new(client.clone(), service_account));
+        }
+
+        let default = DefaultServiceAccount::new(&client).await;
+        if let Ok(service_account) = default {
+            log::debug!("Using DefaultServiceAccount");
+            return Ok(Self::new(client.clone(), service_account));
+        }
+
+        let user = DefaultAuthorizedUser::new(&client).await;
+        if let Ok(user_account) = user {
+            log::debug!("Using DefaultAuthorizedUser");
+            return Ok(Self::new(client, user_account));
+        }
+
+        Err(Error::NoAuthMethod(
+            Box::new(gcloud.unwrap_err()),
+            Box::new(default.unwrap_err()),
+            Box::new(user.unwrap_err()),
+        ))
+    }
+
+    fn new(client: HyperClient, service_account: impl ServiceAccount + 'static) -> Self {
         Self {
             client,
-            service_account,
+            service_account: Box::new(service_account),
             refresh_mutex: Mutex::new(()),
         }
     }

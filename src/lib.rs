@@ -72,15 +72,11 @@ mod types;
 mod util;
 
 use custom_service_account::CustomServiceAccount;
-
 pub use authentication_manager::AuthenticationManager;
 pub use error::Error;
 pub use types::Token;
 
 use std::path::Path;
-
-use hyper::Client;
-use hyper_rustls::HttpsConnectorBuilder;
 
 /// Initialize GCP authentication based on a credentials file path
 ///
@@ -89,7 +85,7 @@ pub async fn from_credentials_file<T: AsRef<Path>>(
     path: T,
 ) -> Result<AuthenticationManager, Error> {
     let custom = CustomServiceAccount::from_file(path.as_ref())?;
-    get_authentication_manager(Some(custom)).await
+    AuthenticationManager::select(Some(custom)).await
 }
 
 /// Initialize GCP authentication based on a JSON string
@@ -97,54 +93,9 @@ pub async fn from_credentials_file<T: AsRef<Path>>(
 /// Returns `AuthenticationManager` which can be used to obtain tokens
 pub async fn from_credentials_json(s: &str) -> Result<AuthenticationManager, Error> {
     let custom = CustomServiceAccount::from_json(s)?;
-    get_authentication_manager(Some(custom)).await
+    AuthenticationManager::select(Some(custom)).await
 }
 
-async fn get_authentication_manager(
-    custom: Option<CustomServiceAccount>,
-) -> Result<AuthenticationManager, Error> {
-    #[cfg(feature = "webpki-roots")]
-    let https = HttpsConnectorBuilder::new().with_webpki_roots();
-    #[cfg(not(feature = "webpki-roots"))]
-    let https = HttpsConnectorBuilder::new().with_native_roots();
-
-    let client =
-        Client::builder().build::<_, hyper::Body>(https.https_or_http().enable_http2().build());
-
-    if let Some(service_account) = custom {
-        log::debug!("Using CustomServiceAccount");
-        return Ok(AuthenticationManager::new(
-            client,
-            Box::new(service_account),
-        ));
-    }
-    let gcloud = gcloud_authorized_user::GCloudAuthorizedUser::new().await;
-    if let Ok(service_account) = gcloud {
-        log::debug!("Using GCloudAuthorizedUser");
-        return Ok(AuthenticationManager::new(
-            client.clone(),
-            Box::new(service_account),
-        ));
-    }
-    let default = default_service_account::DefaultServiceAccount::new(&client).await;
-    if let Ok(service_account) = default {
-        log::debug!("Using DefaultServiceAccount");
-        return Ok(AuthenticationManager::new(
-            client.clone(),
-            Box::new(service_account),
-        ));
-    }
-    let user = default_authorized_user::DefaultAuthorizedUser::new(&client).await;
-    if let Ok(user_account) = user {
-        log::debug!("Using DefaultAuthorizedUser");
-        return Ok(AuthenticationManager::new(client, Box::new(user_account)));
-    }
-    Err(Error::NoAuthMethod(
-        Box::new(gcloud.unwrap_err()),
-        Box::new(default.unwrap_err()),
-        Box::new(user.unwrap_err()),
-    ))
-}
 /// Initialize GCP authentication
 ///
 /// Returns `AuthenticationManager` which can be used to obtain tokens
@@ -164,5 +115,5 @@ pub async fn init() -> Result<AuthenticationManager, Error> {
         Err(_) => None,
     };
 
-    get_authentication_manager(custom).await
+    AuthenticationManager::select(custom).await
 }
