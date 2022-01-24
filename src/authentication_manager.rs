@@ -26,10 +26,10 @@ pub struct AuthenticationManager {
 
 impl AuthenticationManager {
     pub(crate) fn from_custom_service_account(service_account: CustomServiceAccount) -> Self {
-        Self::new(types::client(), service_account)
+        Self::build(types::client(), service_account)
     }
 
-    pub(crate) async fn select() -> Result<AuthenticationManager, Error> {
+    pub(crate) async fn new() -> Result<Self, Error> {
         log::debug!("Initializing gcp_auth");
         if let Some(service_account) = CustomServiceAccount::from_env()? {
             return Ok(Self::from_custom_service_account(service_account));
@@ -39,7 +39,7 @@ impl AuthenticationManager {
         let gcloud_error = match GCloudAuthorizedUser::new() {
             Ok(service_account) => {
                 log::debug!("Using GCloudAuthorizedUser");
-                return Ok(Self::new(client, service_account));
+                return Ok(Self::build(client, service_account));
             }
             Err(e) => e,
         };
@@ -47,7 +47,7 @@ impl AuthenticationManager {
         let default_service_error = match DefaultServiceAccount::new(&client).await {
             Ok(service_account) => {
                 log::debug!("Using DefaultServiceAccount");
-                return Ok(Self::new(client, service_account));
+                return Ok(Self::build(client, service_account));
             }
             Err(e) => e,
         };
@@ -55,7 +55,7 @@ impl AuthenticationManager {
         let default_user_error = match DefaultAuthorizedUser::new(&client).await {
             Ok(service_account) => {
                 log::debug!("Using DefaultAuthorizedUser");
-                return Ok(Self::new(client, service_account));
+                return Ok(Self::build(client, service_account));
             }
             Err(e) => e,
         };
@@ -67,7 +67,7 @@ impl AuthenticationManager {
         ))
     }
 
-    fn new(client: HyperClient, service_account: impl ServiceAccount + 'static) -> Self {
+    fn build(client: HyperClient, service_account: impl ServiceAccount + 'static) -> Self {
         Self {
             client,
             service_account: Box::new(service_account),

@@ -100,5 +100,5 @@ pub fn from_credentials_json(s: &str) -> Result<AuthenticationManager, Error> {
 ///
 /// Returns `AuthenticationManager` which can be used to obtain tokens
 pub async fn init() -> Result<AuthenticationManager, Error> {
-    AuthenticationManager::select().await
+    AuthenticationManager::new().await
 }
