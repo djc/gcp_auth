@@ -23,17 +23,6 @@ pub enum Error {
     #[error("Could not establish connection with OAuth server")]
     OAuthConnectionError(#[source] hyper::Error),
 
-    /// Error when parsing response from OAuth server
-    #[error("Could not parse OAuth server response")]
-    OAuthParsingError(#[source] serde_json::error::Error),
-
-    /// Variable `GOOGLE_APPLICATION_CREDENTIALS` could not be found in the current environment
-    ///
-    /// GOOGLE_APPLICATION_CREDENTIALS is used for providing path to json file with applications credentials.
-    /// File can be downloaded in GCP Console when creating service account.
-    #[error("Path to custom auth credentials was not provided in `GOOGLE_APPLICATION_CREDENTIALS` env variable")]
-    ApplicationProfileMissing,
-
     /// Wrong path to custom service account credentials provided
     ///
     /// By default, the custom service account credentials are parsed from the path pointed to by the
