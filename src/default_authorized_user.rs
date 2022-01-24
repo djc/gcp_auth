@@ -1,11 +1,10 @@
-use std::path::Path;
+use std::fs;
 use std::sync::RwLock;
 
 use async_trait::async_trait;
 use hyper::body::Body;
 use hyper::{Method, Request};
 use serde::{Deserialize, Serialize};
-use tokio::fs;
 
 use crate::authentication_manager::ServiceAccount;
 use crate::error::Error;
@@ -40,13 +39,18 @@ impl DefaultAuthorizedUser {
         log::debug!("Loading user credentials file");
         let mut home = dirs_next::home_dir().ok_or(Error::NoHomeDir)?;
         home.push(Self::USER_CREDENTIALS_PATH);
-        let cred = UserCredentials::from_file(home.display().to_string()).await?;
+
+        let file = fs::File::open(home).map_err(Error::UserProfilePath)?;
+        let cred = serde_json::from_reader::<_, UserCredentials>(file)
+            .map_err(Error::UserProfileFormat)?;
+
         let req = Self::build_token_request(&RefreshRequest {
             client_id: cred.client_id,
             client_secret: cred.client_secret,
             grant_type: "refresh_token".to_string(),
             refresh_token: cred.refresh_token,
         });
+
         let token = client
             .request(req)
             .await
@@ -92,13 +96,4 @@ struct UserCredentials {
     pub(crate) refresh_token: String,
     /// Type
     pub(crate) r#type: String,
-}
-
-impl UserCredentials {
-    async fn from_file<T: AsRef<Path>>(path: T) -> Result<UserCredentials, Error> {
-        let content = fs::read_to_string(path)
-            .await
-            .map_err(Error::UserProfilePath)?;
-        Ok(serde_json::from_str(&content).map_err(Error::UserProfileFormat)?)
-    }
 }
