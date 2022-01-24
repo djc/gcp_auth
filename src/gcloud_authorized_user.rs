@@ -1,8 +1,6 @@
 use crate::authentication_manager::ServiceAccount;
 use crate::error::Error;
-use crate::error::Error::{
-    GCloudError, GCloudNotFound, GCloudParseError, NoProjectId, ParsingError,
-};
+use crate::error::Error::{GCloudError, GCloudNotFound, GCloudParseError, ParsingError};
 use crate::types::HyperClient;
 use crate::Token;
 use async_trait::async_trait;
@@ -27,7 +25,15 @@ impl GCloudAuthorizedUser {
 #[async_trait]
 impl ServiceAccount for GCloudAuthorizedUser {
     async fn project_id(&self, _: &HyperClient) -> Result<String, Error> {
-        Err(NoProjectId)
+        let mut command = Command::new(&self.gcloud);
+        command.args(&["config", "get-value", "project"]);
+
+        match command.output() {
+            Ok(output) if output.status.success() => {
+                String::from_utf8(output.stdout).map_err(|_| GCloudParseError)
+            }
+            _ => Err(Error::ProjectIdNotFound),
+        }
     }
 
     fn get_token(&self, _scopes: &[&str]) -> Option<Token> {
