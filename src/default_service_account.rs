@@ -35,7 +35,7 @@ impl DefaultServiceAccount {
     }
 
     async fn get_token(client: &HyperClient) -> Result<Token, Error> {
-        log::debug!("Getting token from GCP instance metadata server");
+        tracing::debug!("Getting token from GCP instance metadata server");
         let req = Self::build_token_request(Self::DEFAULT_TOKEN_GCP_URI);
         let token = client
             .request(req)
@@ -50,7 +50,7 @@ impl DefaultServiceAccount {
 #[async_trait]
 impl ServiceAccount for DefaultServiceAccount {
     async fn project_id(&self, client: &HyperClient) -> Result<String, Error> {
-        log::debug!("Getting project ID from GCP instance metadata server");
+        tracing::debug!("Getting project ID from GCP instance metadata server");
         let req = Self::build_token_request(Self::DEFAULT_PROJECT_ID_GCP_URI);
         let rsp = client.request(req).await.map_err(Error::ConnectionError)?;
 

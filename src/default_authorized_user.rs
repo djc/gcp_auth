@@ -36,7 +36,7 @@ impl DefaultAuthorizedUser {
     }
 
     async fn get_token(client: &HyperClient) -> Result<Token, Error> {
-        log::debug!("Loading user credentials file");
+        tracing::debug!("Loading user credentials file");
         let mut home = dirs_next::home_dir().ok_or(Error::NoHomeDir)?;
         home.push(Self::USER_CREDENTIALS_PATH);
 
