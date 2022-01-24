@@ -110,6 +110,6 @@ impl ApplicationCredentials {
     }
 
     fn from_json(s: &str) -> Result<ApplicationCredentials, Error> {
-        Ok(serde_json::from_str(s).map_err(Error::ApplicationProfileFormat)?)
+        serde_json::from_str(s).map_err(Error::ApplicationProfileFormat)
     }
 }
