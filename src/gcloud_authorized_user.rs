@@ -17,7 +17,7 @@ pub(crate) struct GCloudAuthorizedUser {
 }
 
 impl GCloudAuthorizedUser {
-    pub(crate) async fn new() -> Result<Self, Error> {
+    pub(crate) fn new() -> Result<Self, Error> {
         which("gcloud")
             .map_err(|_| GCloudNotFound)
             .map(|path| Self { gcloud: path })

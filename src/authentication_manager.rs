@@ -43,7 +43,7 @@ impl AuthenticationManager {
             return Ok(Self::new(client, service_account));
         }
 
-        let gcloud = GCloudAuthorizedUser::new().await;
+        let gcloud = GCloudAuthorizedUser::new();
         if let Ok(service_account) = gcloud {
             log::debug!("Using GCloudAuthorizedUser");
             return Ok(Self::new(client.clone(), service_account));
