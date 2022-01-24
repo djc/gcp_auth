@@ -122,6 +122,12 @@ impl Signer {
     }
 }
 
+impl fmt::Debug for Signer {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Signer").finish()
+    }
+}
+
 fn deserialize_time<'de, D>(deserializer: D) -> Result<Option<OffsetDateTime>, D::Error>
 where
     D: Deserializer<'de>,

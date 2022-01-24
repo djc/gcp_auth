@@ -7,14 +7,15 @@ use serde::{Deserialize, Serialize};
 
 use crate::authentication_manager::ServiceAccount;
 use crate::error::Error;
-use crate::types::{HyperClient, Token};
+use crate::types::{HyperClient, Signer, Token};
 use crate::util::HyperExt;
 
 /// A custom service account containing credentials
 #[derive(Debug)]
 pub struct CustomServiceAccount {
-    tokens: RwLock<HashMap<Vec<String>, Token>>,
     credentials: ApplicationCredentials,
+    signer: Signer,
+    tokens: RwLock<HashMap<Vec<String>, Token>>,
 }
 
 impl CustomServiceAccount {
@@ -31,17 +32,24 @@ impl CustomServiceAccount {
     /// Read service account credentials from the given JSON file
     pub fn from_file<T: AsRef<Path>>(path: T) -> Result<Self, Error> {
         let file = std::fs::File::open(path.as_ref()).map_err(Error::CustomServiceAccountPath)?;
-        Ok(Self {
-            credentials: serde_json::from_reader(file)
-                .map_err(Error::CustomServiceAccountCredentials)?,
-            tokens: RwLock::new(HashMap::new()),
-        })
+        match serde_json::from_reader::<_, ApplicationCredentials>(file) {
+            Ok(credentials) => Self::new(credentials),
+            Err(e) => Err(Error::CustomServiceAccountCredentials(e)),
+        }
     }
 
     /// Read service account credentials from the given JSON string
     pub fn from_json(s: &str) -> Result<Self, Error> {
+        match serde_json::from_str::<ApplicationCredentials>(s) {
+            Ok(credentials) => Self::new(credentials),
+            Err(e) => Err(Error::CustomServiceAccountCredentials(e)),
+        }
+    }
+
+    fn new(credentials: ApplicationCredentials) -> Result<Self, Error> {
         Ok(Self {
-            credentials: serde_json::from_str(s).map_err(Error::CustomServiceAccountCredentials)?,
+            signer: Signer::new(&credentials.private_key)?,
+            credentials,
             tokens: RwLock::new(HashMap::new()),
         })
     }
@@ -74,12 +82,10 @@ impl ServiceAccount for CustomServiceAccount {
     async fn refresh_token(&self, client: &HyperClient, scopes: &[&str]) -> Result<Token, Error> {
         use crate::jwt::Claims;
         use crate::jwt::GRANT_TYPE;
-        use crate::types::Signer;
         use hyper::header;
         use url::form_urlencoded;
 
-        let signer = Signer::new(&self.credentials.private_key)?;
-        let jwt = Claims::new(&self.credentials, scopes, None).to_jwt(&signer)?;
+        let jwt = Claims::new(&self.credentials, scopes, None).to_jwt(&self.signer)?;
         let rqbody = form_urlencoded::Serializer::new(String::new())
             .extend_pairs(&[("grant_type", GRANT_TYPE), ("assertion", jwt.as_str())])
             .finish();
