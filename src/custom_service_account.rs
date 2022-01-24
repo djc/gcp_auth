@@ -81,7 +81,7 @@ impl ServiceAccount for CustomServiceAccount {
         let signer = JwtSigner::new(&self.credentials.private_key)?;
 
         let claims = Claims::new(&self.credentials, scopes, None);
-        let signed = signer.sign_claims(&claims).map_err(Error::TLSError)?;
+        let signed = signer.sign_claims(&claims).map_err(Error::TlsError)?;
         let rqbody = form_urlencoded::Serializer::new(String::new())
             .extend_pairs(&[("grant_type", GRANT_TYPE), ("assertion", signed.as_str())])
             .finish();
