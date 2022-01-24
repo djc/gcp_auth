@@ -76,8 +76,8 @@ impl Token {
     }
 }
 
-/// A JSON Web Token ready for signing.
-pub(crate) struct Signer {
+/// An RSA PKCS1 SHA256 signer
+pub struct Signer {
     key: RsaKeyPair,
     rng: SystemRandom,
 }
@@ -113,7 +113,8 @@ impl Signer {
         })
     }
 
-    pub(crate) fn sign(&self, input: &[u8]) -> Result<Vec<u8>, Error> {
+    /// Sign the input message and return the signature
+    pub fn sign(&self, input: &[u8]) -> Result<Vec<u8>, Error> {
         let mut signature = vec![0; self.key.public_modulus_len()];
         self.key
             .sign(&RSA_PKCS1_SHA256, &self.rng, input, &mut signature)

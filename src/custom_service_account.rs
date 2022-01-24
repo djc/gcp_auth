@@ -54,6 +54,11 @@ impl CustomServiceAccount {
         })
     }
 
+    /// The RSA PKCS1 SHA256 [`Signer`] used to sign JWT tokens
+    pub fn signer(&self) -> &Signer {
+        &self.signer
+    }
+
     /// The project ID as found in the credentials
     pub fn project_id(&self) -> Option<&str> {
         self.credentials.project_id.as_deref()
