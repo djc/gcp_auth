@@ -76,24 +76,24 @@ use custom_service_account::CustomServiceAccount;
 pub use error::Error;
 pub use types::Token;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// Initialize GCP authentication based on a credentials file path
 ///
 /// Returns `AuthenticationManager` which can be used to obtain tokens
-pub async fn from_credentials_file<T: AsRef<Path>>(
-    path: T,
-) -> Result<AuthenticationManager, Error> {
-    let custom = CustomServiceAccount::from_file(path.as_ref())?;
-    AuthenticationManager::select(Some(custom)).await
+pub fn from_credentials_file<T: AsRef<Path>>(path: T) -> Result<AuthenticationManager, Error> {
+    Ok(AuthenticationManager::from_custom_service_account(
+        CustomServiceAccount::from_file(path.as_ref())?,
+    ))
 }
 
 /// Initialize GCP authentication based on a JSON string
 ///
 /// Returns `AuthenticationManager` which can be used to obtain tokens
-pub async fn from_credentials_json(s: &str) -> Result<AuthenticationManager, Error> {
-    let custom = CustomServiceAccount::from_json(s)?;
-    AuthenticationManager::select(Some(custom)).await
+pub fn from_credentials_json(s: &str) -> Result<AuthenticationManager, Error> {
+    Ok(AuthenticationManager::from_custom_service_account(
+        CustomServiceAccount::from_json(s)?,
+    ))
 }
 
 /// Initialize GCP authentication
@@ -104,15 +104,14 @@ pub async fn init() -> Result<AuthenticationManager, Error> {
 
     // will return an error if the environment variable isn’t set, in which case custom is set to
     // none.
-    let custom = std::env::var_os("GOOGLE_APPLICATION_CREDENTIALS")
-        .and_then(|path| {
+    match std::env::var_os("GOOGLE_APPLICATION_CREDENTIALS") {
+        Some(path) => {
             log::debug!("Reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var");
 
-            // We know that GOOGLE_APPLICATION_CREDENTIALS exists, read the file and return an
-            // error in case of failure.
-            Some(CustomServiceAccount::from_file(Path::new(&path)))
-        })
-        .transpose()?;
-
-    AuthenticationManager::select(custom).await
+            Ok(AuthenticationManager::from_custom_service_account(
+                CustomServiceAccount::from_file(&PathBuf::from(path))?,
+            ))
+        }
+        None => AuthenticationManager::select().await,
+    }
 }
