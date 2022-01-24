@@ -43,7 +43,7 @@ impl AuthenticationManager {
     /// 4. Look for credentials in `.config/gcloud/application_default_credentials.json`;
     ///    if found, use these credentials to request refresh tokens.
     pub async fn new() -> Result<Self, Error> {
-        log::debug!("Initializing gcp_auth");
+        tracing::debug!("Initializing gcp_auth");
         if let Some(service_account) = CustomServiceAccount::from_env()? {
             return Ok(Self::from_custom_service_account(service_account));
         }
@@ -51,7 +51,7 @@ impl AuthenticationManager {
         let client = types::client();
         let gcloud_error = match GCloudAuthorizedUser::new() {
             Ok(service_account) => {
-                log::debug!("Using GCloudAuthorizedUser");
+                tracing::debug!("Using GCloudAuthorizedUser");
                 return Ok(Self::build(client, service_account));
             }
             Err(e) => e,
@@ -59,7 +59,7 @@ impl AuthenticationManager {
 
         let default_service_error = match DefaultServiceAccount::new(&client).await {
             Ok(service_account) => {
-                log::debug!("Using DefaultServiceAccount");
+                tracing::debug!("Using DefaultServiceAccount");
                 return Ok(Self::build(client, service_account));
             }
             Err(e) => e,
@@ -67,7 +67,7 @@ impl AuthenticationManager {
 
         let default_user_error = match DefaultAuthorizedUser::new(&client).await {
             Ok(service_account) => {
-                log::debug!("Using DefaultAuthorizedUser");
+                tracing::debug!("Using DefaultAuthorizedUser");
                 return Ok(Self::build(client, service_account));
             }
             Err(e) => e,

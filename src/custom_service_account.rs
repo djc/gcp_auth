@@ -23,7 +23,9 @@ impl CustomServiceAccount {
     pub fn from_env() -> Result<Option<Self>, Error> {
         std::env::var_os("GOOGLE_APPLICATION_CREDENTIALS")
             .map(|path| {
-                log::debug!("Reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var");
+                tracing::debug!(
+                    "Reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var"
+                );
                 Self::from_file(&PathBuf::from(path))
             })
             .transpose()
@@ -100,7 +102,7 @@ impl ServiceAccount for CustomServiceAccount {
             .body(hyper::Body::from(rqbody))
             .unwrap();
 
-        log::debug!("requesting token from service account: {:?}", request);
+        tracing::debug!("requesting token from service account: {:?}", request);
         let token = client
             .request(request)
             .await

@@ -27,7 +27,7 @@ impl HyperExt for hyper::Response<hyper::body::Body> {
                 parts.status,
                 String::from_utf8_lossy(body.as_ref())
             );
-            log::error!("{}", error);
+            tracing::error!("{}", error);
             return Err(Error::ServerUnavailable(error));
         }
 
