@@ -73,8 +73,8 @@ impl ServiceAccount for CustomServiceAccount {
 
     async fn refresh_token(&self, client: &HyperClient, scopes: &[&str]) -> Result<Token, Error> {
         use crate::jwt::Claims;
-        use crate::jwt::Signer;
         use crate::jwt::GRANT_TYPE;
+        use crate::types::Signer;
         use hyper::header;
         use url::form_urlencoded;
 

@@ -1,15 +1,10 @@
 //! Copyright (c) 2016 Google Inc (lewinb@google.com).
 
-use std::io;
-
-use ring::{
-    rand::SystemRandom,
-    signature::{RsaKeyPair, RSA_PKCS1_SHA256},
-};
 use serde::Serialize;
 
 use crate::custom_service_account::ApplicationCredentials;
 use crate::error::Error;
+use crate::types::Signer;
 
 pub(crate) const GRANT_TYPE: &str = "urn:ietf:params:oauth:grant-type:jwt-bearer";
 const GOOGLE_RS256_HEAD: &str = r#"{"alg":"RS256","typ":"JWT"}"#;
@@ -68,51 +63,5 @@ impl<'a> Claims<'a> {
         jwt.push('.');
         append_base64(&signature, &mut jwt);
         Ok(jwt)
-    }
-}
-
-/// A JSON Web Token ready for signing.
-pub(crate) struct Signer {
-    key: RsaKeyPair,
-    rng: SystemRandom,
-}
-
-impl Signer {
-    pub(crate) fn new(pem_pkcs8: &str) -> Result<Self, Error> {
-        let private_keys = rustls_pemfile::pkcs8_private_keys(&mut pem_pkcs8.as_bytes());
-
-        let key = match private_keys {
-            Ok(mut keys) if !keys.is_empty() => {
-                keys.truncate(1);
-                keys.remove(0)
-            }
-            Ok(_) => {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    "Not enough private keys in PEM",
-                )
-                .into())
-            }
-            Err(_) => {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    "Error reading key from PEM",
-                )
-                .into())
-            }
-        };
-
-        Ok(Signer {
-            key: RsaKeyPair::from_pkcs8(&key).map_err(|_| Error::SignerInit)?,
-            rng: SystemRandom::new(),
-        })
-    }
-
-    pub(crate) fn sign(&self, input: &[u8]) -> Result<Vec<u8>, Error> {
-        let mut signature = vec![0; self.key.public_modulus_len()];
-        self.key
-            .sign(&RSA_PKCS1_SHA256, &self.rng, input, &mut signature)
-            .map_err(|_| Error::SignerFailed)?;
-        Ok(signature)
     }
 }
