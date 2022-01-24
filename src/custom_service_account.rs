@@ -4,7 +4,6 @@ use std::sync::RwLock;
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use tokio::fs;
 
 use crate::authentication_manager::ServiceAccount;
 use crate::error::Error;
@@ -18,16 +17,18 @@ pub(crate) struct CustomServiceAccount {
 }
 
 impl CustomServiceAccount {
-    pub(crate) async fn from_file(path: &Path) -> Result<Self, Error> {
+    pub(crate) fn from_file(path: &Path) -> Result<Self, Error> {
+        let file = std::fs::File::open(path).map_err(Error::CustomServiceAccountPath)?;
         Ok(Self {
-            credentials: ApplicationCredentials::from_file(path).await?,
+            credentials: serde_json::from_reader(file)
+                .map_err(Error::CustomServiceAccountCredentials)?,
             tokens: RwLock::new(HashMap::new()),
         })
     }
 
     pub(crate) fn from_json(s: &str) -> Result<Self, Error> {
         Ok(Self {
-            credentials: ApplicationCredentials::from_json(s)?,
+            credentials: serde_json::from_str(s).map_err(Error::CustomServiceAccountCredentials)?,
             tokens: RwLock::new(HashMap::new()),
         })
     }
@@ -99,17 +100,4 @@ pub(crate) struct ApplicationCredentials {
     pub(crate) auth_provider_x509_cert_url: Option<String>,
     /// client_x509_cert_url
     pub(crate) client_x509_cert_url: Option<String>,
-}
-
-impl ApplicationCredentials {
-    async fn from_file<T: AsRef<Path>>(path: T) -> Result<ApplicationCredentials, Error> {
-        let content = fs::read_to_string(path)
-            .await
-            .map_err(Error::ApplicationProfilePath)?;
-        ApplicationCredentials::from_json(&content)
-    }
-
-    fn from_json(s: &str) -> Result<ApplicationCredentials, Error> {
-        serde_json::from_str(s).map_err(Error::ApplicationProfileFormat)
-    }
 }

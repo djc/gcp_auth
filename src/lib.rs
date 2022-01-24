@@ -88,7 +88,7 @@ use hyper_rustls::HttpsConnectorBuilder;
 pub async fn from_credentials_file<T: AsRef<Path>>(
     path: T,
 ) -> Result<AuthenticationManager, Error> {
-    let custom = CustomServiceAccount::from_file(path.as_ref()).await?;
+    let custom = CustomServiceAccount::from_file(path.as_ref())?;
     get_authentication_manager(Some(custom)).await
 }
 
@@ -159,7 +159,7 @@ pub async fn init() -> Result<AuthenticationManager, Error> {
 
             // We know that GOOGLE_APPLICATION_CREDENTIALS exists, read the file and return an
             // error in case of failure.
-            Some(CustomServiceAccount::from_file(Path::new(&path)).await?)
+            Some(CustomServiceAccount::from_file(Path::new(&path))?)
         }
         Err(_) => None,
     };
