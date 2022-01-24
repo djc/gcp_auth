@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 
 use async_trait::async_trait;
@@ -17,6 +17,15 @@ pub(crate) struct CustomServiceAccount {
 }
 
 impl CustomServiceAccount {
+    pub(crate) fn from_env() -> Result<Option<Self>, Error> {
+        std::env::var_os("GOOGLE_APPLICATION_CREDENTIALS")
+            .map(|path| {
+                log::debug!("Reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var");
+                Self::from_file(&PathBuf::from(path))
+            })
+            .transpose()
+    }
+
     pub(crate) fn from_file(path: &Path) -> Result<Self, Error> {
         let file = std::fs::File::open(path).map_err(Error::CustomServiceAccountPath)?;
         Ok(Self {
