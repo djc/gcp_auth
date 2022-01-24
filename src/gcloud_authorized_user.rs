@@ -44,14 +44,13 @@ impl ServiceAccount for GCloudAuthorizedUser {
         let mut command = Command::new(&self.gcloud);
         command.args(&["auth", "print-access-token", "--quiet"]);
 
-        match command.output() {
-            Ok(output) if output.status.success() => String::from_utf8(output.stdout)
-                .map_err(|_| GCloudParseError)
-                .and_then(|access_token| {
-                    serde_json::from_value::<Token>(json!({ "access_token": access_token.trim() }))
-                        .map_err(ParsingError)
-                }),
-            _ => Err(GCloudError),
-        }
+        let output = match command.output() {
+            Ok(output) if output.status.success() => output.stdout,
+            _ => return Err(GCloudError),
+        };
+
+        let access_token = String::from_utf8(output).map_err(|_| GCloudParseError)?;
+        serde_json::from_value::<Token>(json!({ "access_token": access_token.trim() }))
+            .map_err(ParsingError)
     }
 }
