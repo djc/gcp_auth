@@ -60,9 +60,9 @@ pub enum Error {
     #[error("Server unavailable: {0}")]
     ServerUnavailable(String),
 
-    /// Could not determine signer scheme
-    #[error("Couldn't choose signing scheme")]
-    SignerSchemeError,
+    /// Could not sign requested message
+    #[error("Could not sign")]
+    SignerFailed,
 
     /// Could not initialize signer
     #[error("Couldn't initialize signer")]
