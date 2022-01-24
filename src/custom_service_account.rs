@@ -45,6 +45,16 @@ impl CustomServiceAccount {
             tokens: RwLock::new(HashMap::new()),
         })
     }
+
+    /// The project ID as found in the credentials
+    pub fn project_id(&self) -> Option<&str> {
+        self.credentials.project_id.as_deref()
+    }
+
+    /// The private key as found in the credentials
+    pub fn private_key_pem(&self) -> &str {
+        &self.credentials.private_key
+    }
 }
 
 #[async_trait]
