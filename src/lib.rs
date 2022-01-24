@@ -76,7 +76,7 @@ use custom_service_account::CustomServiceAccount;
 pub use error::Error;
 pub use types::Token;
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// Initialize GCP authentication based on a credentials file path
 ///
@@ -100,18 +100,5 @@ pub fn from_credentials_json(s: &str) -> Result<AuthenticationManager, Error> {
 ///
 /// Returns `AuthenticationManager` which can be used to obtain tokens
 pub async fn init() -> Result<AuthenticationManager, Error> {
-    log::debug!("Initializing gcp_auth");
-
-    // will return an error if the environment variable isn’t set, in which case custom is set to
-    // none.
-    match std::env::var_os("GOOGLE_APPLICATION_CREDENTIALS") {
-        Some(path) => {
-            log::debug!("Reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var");
-
-            Ok(AuthenticationManager::from_custom_service_account(
-                CustomServiceAccount::from_file(&PathBuf::from(path))?,
-            ))
-        }
-        None => AuthenticationManager::select().await,
-    }
+    AuthenticationManager::select().await
 }

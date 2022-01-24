@@ -30,8 +30,12 @@ impl AuthenticationManager {
     }
 
     pub(crate) async fn select() -> Result<AuthenticationManager, Error> {
-        let client = types::client();
+        log::debug!("Initializing gcp_auth");
+        if let Some(service_account) = CustomServiceAccount::from_env()? {
+            return Ok(Self::from_custom_service_account(service_account));
+        }
 
+        let client = types::client();
         let gcloud_error = match GCloudAuthorizedUser::new() {
             Ok(service_account) => {
                 log::debug!("Using GCloudAuthorizedUser");
