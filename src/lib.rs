@@ -75,10 +75,3 @@ pub use authentication_manager::AuthenticationManager;
 pub use custom_service_account::CustomServiceAccount;
 pub use error::Error;
 pub use types::{Signer, Token};
-
-/// Initialize GCP authentication
-///
-/// This is a convenience wrapper around [`AuthenticationManager::new()`].
-pub async fn init() -> Result<AuthenticationManager, Error> {
-    AuthenticationManager::new().await
-}
