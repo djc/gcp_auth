@@ -14,6 +14,8 @@ use crate::util::HyperExt;
 ///
 /// Once initialized, a [`CustomServiceAccount`] can be converted into an [`AuthenticationManager`]
 /// using the applicable `From` implementation.
+///
+/// [`AuthenticationManager`]: crate::AuthenticationManager
 #[derive(Debug)]
 pub struct CustomServiceAccount {
     credentials: ApplicationCredentials,
