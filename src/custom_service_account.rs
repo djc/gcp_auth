@@ -11,6 +11,9 @@ use crate::types::{HyperClient, Signer, Token};
 use crate::util::HyperExt;
 
 /// A custom service account containing credentials
+///
+/// Once initialized, a [`CustomServiceAccount`] can be converted into an [`AuthenticationManager`]
+/// using the applicable `From` implementation.
 #[derive(Debug)]
 pub struct CustomServiceAccount {
     credentials: ApplicationCredentials,

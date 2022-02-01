@@ -17,7 +17,9 @@ pub(crate) trait ServiceAccount: Send + Sync {
 
 /// Authentication manager is responsible for caching and obtaing credentials for the required scope
 ///
-/// Cacheing for the full life time is ensured
+/// Construct the authentication manager with [`AuthenticationManager::new()`] or by creating
+/// a [`CustomServiceAccount`], then converting it into an `AuthenticationManager` using the `From`
+/// impl.
 pub struct AuthenticationManager {
     pub(crate) client: HyperClient,
     pub(crate) service_account: Box<dyn ServiceAccount>,
@@ -25,11 +27,6 @@ pub struct AuthenticationManager {
 }
 
 impl AuthenticationManager {
-    /// Create an `AuthenticationManager` directly from a custom service account
-    pub fn from_custom_service_account(service_account: CustomServiceAccount) -> Self {
-        Self::build(types::client(), service_account)
-    }
-
     /// Finds a service account provider to get authentication tokens from
     ///
     /// Tries the following approaches, in order:
@@ -46,7 +43,7 @@ impl AuthenticationManager {
     pub async fn new() -> Result<Self, Error> {
         tracing::debug!("Initializing gcp_auth");
         if let Some(service_account) = CustomServiceAccount::from_env()? {
-            return Ok(Self::from_custom_service_account(service_account));
+            return Ok(service_account.into());
         }
 
         let client = types::client();
@@ -121,6 +118,6 @@ impl AuthenticationManager {
 
 impl From<CustomServiceAccount> for AuthenticationManager {
     fn from(service_account: CustomServiceAccount) -> Self {
-        Self::from_custom_service_account(service_account)
+        Self::build(types::client(), service_account)
     }
 }
