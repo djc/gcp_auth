@@ -1,60 +1,87 @@
 //! GCP auth provides authentication using service accounts Google Cloud Platform (GCP)
 //!
-//! The library looks for authentication methods in the following order:
+//! GCP auth is a simple, minimal authentication library for Google Cloud Platform (GCP)
+//! providing authentication using service accounts. Once authenticated, the service
+//! account can be used to acquire bearer tokens for use in authenticating against GCP
+//! services.
 //!
-//! 1. Path to service account JSON configuration file using GOOGLE_APPLICATION_CREDENTIALS environment
-//! variable. The service account configuration file can be downloaded in the IAM service when displaying service account detail.
-//! The downloaded JSON file should be provided without any further modification.
-//! 2. Invoking the library inside GCP environment fetches the default service account for the service and
-//! the application is authenticated using that particular account
-//! 3. Application default credentials. Local user authentication for development purposes created using `gcloud auth` application.
-//! 4. If none of the above can be used an error occurs
+//! The library supports the following methods of retrieving tokens:
 //!
-//! The tokens are single-use and as such they shouldn't be cached and for each use a new token should be requested.
-//! Library handles token caching for their lifetime and so it won't make a request if a token with appropriate scope
-//! is available.
+//! 1. Reading custom service account credentials from the path pointed to by the
+//!    `GOOGLE_APPLICATION_CREDENTIALS` environment variable. Alternatively, custom service
+//!    account credentials can be read from a JSON file or string.
+//! 2. Retrieving a token from the `gcloud` CLI tool, if it is available on the `PATH`.
+//! 3. Use the default service account by retrieving a token from the metadata server.
+//! 4. Look for credentials in `.config/gcloud/application_default_credentials.json`;
+//!    if found, use these credentials to request refresh tokens.
 //!
-//! # Default service account
+//! For more details, see [`AuthenticationManager::new()`].
 //!
-//! When running inside GCP the library can be asked directly without any further configuration to provide a Bearer token
-//! for the current service account of the service.
+//! The `AuthenticationManager` handles caching tokens for their lifetime; it will not make a request if
+//! an appropriate token is already cached. Therefore, the caller should not cache tokens.
 //!
-//! ```async
-//! let authentication_manager = gcp_auth::init().await?;
-//! let token = authentication_manager.get_token().await?;
+//! ## Simple usage
+//!
+//! The default way to use this library is to get instantiate an [`AuthenticationManager`]. It will
+//! find the appropriate authentication method and use it to retrieve tokens.
+//!
+//! ```rust,no_run
+//! # async fn get_token() -> Result<(), gcp_auth::Error> {
+//! use gcp_auth::AuthenticationManager;
+//!
+//! let authentication_manager = AuthenticationManager::new().await?;
+//! let scopes = &["https://www.googleapis.com/auth/cloud-platform"];
+//! let token = authentication_manager.get_token(scopes).await?;
+//! # Ok(())
+//! # }
 //! ```
 //!
-//! # Custom service account
+//! ## Supplying service account credentials
 //!
-//! When running outside of GCP e.g on development laptop to allow finer granularity for permission a
-//! custom service account can be used. To use a custom service account a configuration file containing key
-//! has to be downloaded in IAM service for the service account you intend to use. The configuration file has to
-//! be available to the application at run time. The path to the configuration file is specified by
-//! `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
+//! When running outside of GCP (for example, on a development machine), it can be useful to supply
+//! service account credentials. The first method checked by [`AuthenticationManager::new()`] is to
+//! read a path to a file containing JSON credentials in the `GOOGLE_APPLICATION_CREDENTIALS`
+//! environment variable. However, you may also supply a custom path to read credentials from, or
+//! a `&str` containing the credentials. In both of these cases, you should create a
+//! [`CustomServiceAccount`] directly using one of its associated functions:
 //!
-//! ```async
-//! // GOOGLE_APPLICATION_CREDENTIALS environment variable is set-up
-//! let authentication_manager = gcp_auth::init().await?;
-//! let token = authentication_manager.get_token().await?;
-//! ```
-//! You may instantiate `authentication_manager` from a credentials file path using the method `from_credentials_file`:
+//! ```rust,no_run
+//! # use std::path::PathBuf;
+//! #
+//! # async fn get_token() -> Result<(), gcp_auth::Error> {
+//! use gcp_auth::{AuthenticationManager, CustomServiceAccount};
 //!
-//! ```async
 //! // `credentials_path` variable is the path for the credentials `.json` file.
-//! let authentication_manager = gcp_auth::from_credentials_file(credentials_path).await?;
-//! let token = authentication_manager.get_token().await?;
+//! let credentials_path = PathBuf::from("service-account.json");
+//! let service_account = CustomServiceAccount::from_file(credentials_path)?;
+//! let authentication_manager = AuthenticationManager::from(service_account);
+//! let scopes = &["https://www.googleapis.com/auth/cloud-platform"];
+//! let token = authentication_manager.get_token(scopes).await?;
+//! # Ok(())
+//! # }
 //! ```
 //!
-//! # Local user authentication
-//! This authentication method allows developers to authenticate again GCP services when developing locally.
-//! The method is intended only for development. Credentials can be set-up using `gcloud auth` utility.
-//! Credentials are read from file `~/.config/gcloud/application_default_credentials.json`.
+//! ## Getting tokens in multi-thread or async environments
 //!
-//! # FAQ
+//! Using a `OnceCell` makes it easy to reuse the [`AuthenticationManager`] across different
+//! threads or async tasks.
 //!
-//! ## Does library support windows?
+//! ```rust,no_run
+//! use gcp_auth::AuthenticationManager;
+//! use tokio::sync::OnceCell;
 //!
-//! No
+//! static AUTH_MANAGER: OnceCell<AuthenticationManager> = OnceCell::const_new();
+//!
+//! async fn authentication_manager() -> &'static AuthenticationManager {
+//!     AUTH_MANAGER
+//!         .get_or_init(|| async {
+//!             AuthenticationManager::new()
+//!                 .await
+//!                 .expect("unable to initialize authentication manager")
+//!         })
+//!         .await
+//! }
+//! ```
 
 #![deny(missing_docs)]
 #![deny(warnings)]
