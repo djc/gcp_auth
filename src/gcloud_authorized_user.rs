@@ -21,12 +21,23 @@ impl GCloudAuthorizedUser {
             .map_err(|_| GCloudNotFound)
             .map(|path| Self { gcloud: path })
     }
+
+    fn project_id(&self) -> Result<String, Error> {
+        run(&self.gcloud, &["config", "get-value", "project"])
+    }
+
+    fn token(&self) -> Result<Token, Error> {
+        Ok(Token::from_string(run(
+            &self.gcloud,
+            &["auth", "print-access-token", "--quiet"],
+        )?))
+    }
 }
 
 #[async_trait]
 impl ServiceAccount for GCloudAuthorizedUser {
     async fn project_id(&self, _: &HyperClient) -> Result<String, Error> {
-        run(&self.gcloud, &["config", "get-value", "project"])
+        self.project_id()
     }
 
     fn get_token(&self, _scopes: &[&str]) -> Option<Token> {
@@ -34,10 +45,7 @@ impl ServiceAccount for GCloudAuthorizedUser {
     }
 
     async fn refresh_token(&self, _client: &HyperClient, _scopes: &[&str]) -> Result<Token, Error> {
-        Ok(Token::from_string(run(
-            &self.gcloud,
-            &["auth", "print-access-token", "--quiet"],
-        )?))
+        self.token()
     }
 }
 
@@ -55,4 +63,17 @@ fn run(gcloud: &Path, cmd: &[&str]) -> Result<String, Error> {
     }
 
     String::from_utf8(stdout).map_err(|_| GCloudParseError)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[ignore]
+    fn gcloud() {
+        let gcloud = GCloudAuthorizedUser::new().unwrap();
+        println!("{:?}", gcloud.project_id());
+        println!("{:?}", gcloud.token());
+    }
 }
