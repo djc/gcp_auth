@@ -68,7 +68,10 @@ impl DefaultAuthorizedUser {
 #[async_trait]
 impl ServiceAccount for DefaultAuthorizedUser {
     async fn project_id(&self, _: &HyperClient) -> Result<String, Error> {
-        Err(Error::NoProjectId)
+        self.credentials
+            .quota_project_id
+            .clone()
+            .ok_or(Error::NoProjectId)
     }
 
     fn get_token(&self, _scopes: &[&str]) -> Option<Token> {
@@ -96,6 +99,8 @@ struct UserCredentials {
     pub(crate) client_id: String,
     /// Client secret
     pub(crate) client_secret: String,
+    /// Project ID
+    pub(crate) quota_project_id: Option<String>,
     /// Refresh Token
     pub(crate) refresh_token: String,
     /// Type
