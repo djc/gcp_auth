@@ -14,6 +14,7 @@ use crate::util::HyperExt;
 #[derive(Debug)]
 pub(crate) struct DefaultAuthorizedUser {
     token: RwLock<Token>,
+    credentials: UserCredentials,
 }
 
 impl DefaultAuthorizedUser {
@@ -22,8 +23,18 @@ impl DefaultAuthorizedUser {
         ".config/gcloud/application_default_credentials.json";
 
     pub(crate) async fn new(client: &HyperClient) -> Result<Self, Error> {
-        let token = RwLock::new(Self::get_token(client).await?);
-        Ok(Self { token })
+        tracing::debug!("Loading user credentials file");
+        let mut home = dirs_next::home_dir().ok_or(Error::NoHomeDir)?;
+        home.push(Self::USER_CREDENTIALS_PATH);
+
+        let file = fs::File::open(home).map_err(Error::UserProfilePath)?;
+        let credentials = serde_json::from_reader::<_, UserCredentials>(file)
+            .map_err(Error::UserProfileFormat)?;
+
+        Ok(Self {
+            token: RwLock::new(Self::get_token(&credentials, client).await?),
+            credentials,
+        })
     }
 
     fn build_token_request<T: serde::Serialize>(json: &T) -> Request<Body> {
@@ -36,20 +47,12 @@ impl DefaultAuthorizedUser {
     }
 
     #[tracing::instrument]
-    async fn get_token(client: &HyperClient) -> Result<Token, Error> {
-        tracing::debug!("Loading user credentials file");
-        let mut home = dirs_next::home_dir().ok_or(Error::NoHomeDir)?;
-        home.push(Self::USER_CREDENTIALS_PATH);
-
-        let file = fs::File::open(home).map_err(Error::UserProfilePath)?;
-        let cred = serde_json::from_reader::<_, UserCredentials>(file)
-            .map_err(Error::UserProfileFormat)?;
-
+    async fn get_token(cred: &UserCredentials, client: &HyperClient) -> Result<Token, Error> {
         let req = Self::build_token_request(&RefreshRequest {
-            client_id: cred.client_id,
-            client_secret: cred.client_secret,
-            grant_type: "refresh_token".to_string(),
-            refresh_token: cred.refresh_token,
+            client_id: &cred.client_id,
+            client_secret: &cred.client_secret,
+            grant_type: "refresh_token",
+            refresh_token: &cred.refresh_token,
         });
 
         let token = client
@@ -73,18 +76,18 @@ impl ServiceAccount for DefaultAuthorizedUser {
     }
 
     async fn refresh_token(&self, client: &HyperClient, _scopes: &[&str]) -> Result<Token, Error> {
-        let token = Self::get_token(client).await?;
+        let token = Self::get_token(&self.credentials, client).await?;
         *self.token.write().unwrap() = token.clone();
         Ok(token)
     }
 }
 
 #[derive(Serialize, Debug)]
-struct RefreshRequest {
-    client_id: String,
-    client_secret: String,
-    grant_type: String,
-    refresh_token: String,
+struct RefreshRequest<'a> {
+    client_id: &'a str,
+    client_secret: &'a str,
+    grant_type: &'a str,
+    refresh_token: &'a str,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
