@@ -30,7 +30,12 @@ impl ServiceAccount for GCloudAuthorizedUser {
 
         match command.output() {
             Ok(output) if output.status.success() => {
-                String::from_utf8(output.stdout).map_err(|_| GCloudParseError)
+                let mut line = output.stdout;
+                while let Some(b' ' | b'\r' | b'\n') = line.last() {
+                    line.pop();
+                }
+
+                String::from_utf8(line).map_err(|_| GCloudParseError)
             }
             _ => Err(Error::ProjectIdNotFound),
         }
