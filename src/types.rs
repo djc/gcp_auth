@@ -31,6 +31,17 @@ pub struct Token {
     inner: Arc<InnerToken>,
 }
 
+impl Token {
+    pub(crate) fn from_string(access_token: String) -> Self {
+        Token {
+            inner: Arc::new(InnerToken {
+                access_token,
+                expires_at: None,
+            }),
+        }
+    }
+}
+
 impl fmt::Debug for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Token")
