@@ -22,7 +22,7 @@ impl GCloudAuthorizedUser {
     pub(crate) async fn new() -> Result<Self, Error> {
         let gcloud = which("gcloud").map_err(|_| GCloudNotFound)?;
         let project_id = run(&gcloud, &["config", "get-value", "project"]).ok();
-        let token = RwLock::new(Self::get_token_via_gcloud_cmd(&gcloud)?);
+        let token = RwLock::new(Self::token(&gcloud)?);
         Ok(Self {
             gcloud,
             project_id,
@@ -30,7 +30,7 @@ impl GCloudAuthorizedUser {
         })
     }
 
-    fn get_token_via_gcloud_cmd(gcloud: &Path) -> Result<Token, Error> {
+    fn token(gcloud: &Path) -> Result<Token, Error> {
         Ok(Token::from_string(run(
             gcloud,
             &["auth", "print-access-token", "--quiet"],
@@ -49,7 +49,7 @@ impl ServiceAccount for GCloudAuthorizedUser {
     }
 
     async fn refresh_token(&self, _client: &HyperClient, _scopes: &[&str]) -> Result<Token, Error> {
-        let token = Self::get_token_via_gcloud_cmd(&self.gcloud)?;
+        let token = Self::token(&self.gcloud)?;
         *self.token.write().unwrap() = token.clone();
         Ok(token)
     }
