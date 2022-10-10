@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
 
@@ -122,7 +123,7 @@ impl ServiceAccount for CustomServiceAccount {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub(crate) struct ApplicationCredentials {
     pub(crate) r#type: Option<String>,
     /// project_id
@@ -143,4 +144,13 @@ pub(crate) struct ApplicationCredentials {
     pub(crate) auth_provider_x509_cert_url: Option<String>,
     /// client_x509_cert_url
     pub(crate) client_x509_cert_url: Option<String>,
+}
+
+impl fmt::Debug for ApplicationCredentials {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ApplicationCredentials")
+            .field("client_email", &self.client_email)
+            .field("project_id", &self.project_id)
+            .finish()
+    }
 }
