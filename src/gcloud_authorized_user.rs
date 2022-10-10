@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::RwLock;
 
 use async_trait::async_trait;
 use which::which;
@@ -14,18 +15,24 @@ use crate::Token;
 pub(crate) struct GCloudAuthorizedUser {
     gcloud: PathBuf,
     project_id: Option<String>,
+    token: RwLock<Token>,
 }
 
 impl GCloudAuthorizedUser {
-    pub(crate) fn new() -> Result<Self, Error> {
+    pub(crate) async fn new() -> Result<Self, Error> {
         let gcloud = which("gcloud").map_err(|_| GCloudNotFound)?;
         let project_id = run(&gcloud, &["config", "get-value", "project"]).ok();
-        Ok(Self { gcloud, project_id })
+        let token = RwLock::new(Self::token(&gcloud)?);
+        Ok(Self {
+            gcloud,
+            project_id,
+            token,
+        })
     }
 
-    fn token(&self) -> Result<Token, Error> {
+    fn token(gcloud: &Path) -> Result<Token, Error> {
         Ok(Token::from_string(run(
-            &self.gcloud,
+            gcloud,
             &["auth", "print-access-token", "--quiet"],
         )?))
     }
@@ -38,11 +45,13 @@ impl ServiceAccount for GCloudAuthorizedUser {
     }
 
     fn get_token(&self, _scopes: &[&str]) -> Option<Token> {
-        None
+        Some(self.token.read().unwrap().clone())
     }
 
     async fn refresh_token(&self, _client: &HyperClient, _scopes: &[&str]) -> Result<Token, Error> {
-        self.token()
+        let token = Self::token(&self.gcloud)?;
+        *self.token.write().unwrap() = token.clone();
+        Ok(token)
     }
 }
 
@@ -66,11 +75,11 @@ fn run(gcloud: &Path, cmd: &[&str]) -> Result<String, Error> {
 mod tests {
     use super::*;
 
-    #[test]
+    #[tokio::test]
     #[ignore]
-    fn gcloud() {
-        let gcloud = GCloudAuthorizedUser::new().unwrap();
+    async fn gcloud() {
+        let gcloud = GCloudAuthorizedUser::new().await.unwrap();
         println!("{:?}", gcloud.project_id);
-        println!("{:?}", gcloud.token());
+        println!("{:?}", gcloud.get_token(&[""]));
     }
 }

@@ -47,7 +47,7 @@ impl AuthenticationManager {
         }
 
         let client = types::client();
-        let gcloud_error = match GCloudAuthorizedUser::new() {
+        let gcloud_error = match GCloudAuthorizedUser::new().await {
             Ok(service_account) => {
                 tracing::debug!("Using GCloudAuthorizedUser");
                 return Ok(Self::build(client, service_account));
