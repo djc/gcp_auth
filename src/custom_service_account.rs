@@ -32,7 +32,7 @@ impl CustomServiceAccount {
                 tracing::debug!(
                     "Reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var"
                 );
-                Self::from_file(&PathBuf::from(path))
+                Self::from_file(PathBuf::from(path))
             })
             .transpose()
     }
