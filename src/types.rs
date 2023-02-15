@@ -32,11 +32,17 @@ pub struct Token {
 }
 
 impl Token {
-    pub(crate) fn from_string(access_token: String) -> Self {
+    pub(crate) fn from_string(access_token: String, expiry_time: Option<OffsetDateTime>) -> Self {
+        let expires_at = if let Some(expiry_time) = expiry_time {
+            Some(expiry_time)
+        } else {
+            Some(OffsetDateTime::now_utc() + Duration::hours(1))
+        };
+
         Token {
             inner: Arc::new(InnerToken {
                 access_token,
-                expires_at: None,
+                expires_at,
             }),
         }
     }

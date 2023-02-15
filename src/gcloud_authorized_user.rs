@@ -31,10 +31,10 @@ impl GCloudAuthorizedUser {
     }
 
     fn token(gcloud: &Path) -> Result<Token, Error> {
-        Ok(Token::from_string(run(
-            gcloud,
-            &["auth", "print-access-token", "--quiet"],
-        )?))
+        Ok(Token::from_string(
+            run(gcloud, &["auth", "print-access-token", "--quiet"])?,
+            None,
+        ))
     }
 }
 
