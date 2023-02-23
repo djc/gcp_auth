@@ -199,6 +199,7 @@ mod tests {
         let token: Token = serde_json::from_str(s).unwrap();
         let expires = OffsetDateTime::now_utc() + Duration::seconds(3600);
 
+        assert_eq!(token.as_str(), "abc123");
         assert!(token.expires_at() < expires + Duration::seconds(1));
         assert!(token.expires_at() > expires - Duration::seconds(1));
     }
