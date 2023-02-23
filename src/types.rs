@@ -36,7 +36,7 @@ impl Token {
         Token {
             inner: Arc::new(InnerToken {
                 access_token,
-                expires_at: None,
+                expires_at: default_token_expiry(),
             }),
         }
     }
@@ -55,11 +55,11 @@ impl fmt::Debug for Token {
 struct InnerToken {
     access_token: String,
     #[serde(
-        default,
+        default = "default_token_expiry",
         deserialize_with = "deserialize_time",
         rename(deserialize = "expires_in")
     )]
-    expires_at: Option<OffsetDateTime>,
+    expires_at: OffsetDateTime,
 }
 
 impl Token {
@@ -68,12 +68,7 @@ impl Token {
     /// This takes an additional 30s margin to ensure the token can still be reasonably used
     /// instead of expiring right after having checked.
     pub fn has_expired(&self) -> bool {
-        self.inner
-            .expires_at
-            .map(|expiration_time| {
-                expiration_time - Duration::seconds(30) <= OffsetDateTime::now_utc()
-            })
-            .unwrap_or(false)
+        self.inner.expires_at - Duration::seconds(30) <= OffsetDateTime::now_utc()
     }
 
     /// Get str representation of the token.
@@ -82,7 +77,7 @@ impl Token {
     }
 
     /// Get expiry of token, if available
-    pub fn expires_at(&self) -> Option<OffsetDateTime> {
+    pub fn expires_at(&self) -> OffsetDateTime {
         self.inner.expires_at
     }
 }
@@ -140,14 +135,16 @@ impl fmt::Debug for Signer {
     }
 }
 
-fn deserialize_time<'de, D>(deserializer: D) -> Result<Option<OffsetDateTime>, D::Error>
+fn default_token_expiry() -> OffsetDateTime {
+    OffsetDateTime::now_utc() + Duration::seconds(3600)
+}
+
+fn deserialize_time<'de, D>(deserializer: D) -> Result<OffsetDateTime, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let s: Option<i64> = Deserialize::deserialize(deserializer)?;
-    let s =
-        s.map(|seconds_from_now| OffsetDateTime::now_utc() + Duration::seconds(seconds_from_now));
-    Ok(s)
+    let seconds_from_now: i64 = Deserialize::deserialize(deserializer)?;
+    Ok(OffsetDateTime::now_utc() + Duration::seconds(seconds_from_now))
 }
 
 pub(crate) fn client() -> HyperClient {
@@ -171,7 +168,7 @@ mod tests {
         let token = Token {
             inner: Arc::new(InnerToken {
                 access_token: "abc123".to_string(),
-                expires_at: Some(OffsetDateTime::from_unix_timestamp(123).unwrap()),
+                expires_at: OffsetDateTime::from_unix_timestamp(123).unwrap(),
             }),
         };
         let s = serde_json::to_string(&token).unwrap();
@@ -191,7 +188,7 @@ mod tests {
         assert_eq!(token.as_str(), "abc123");
 
         // Testing time is always racy, give it 1s leeway.
-        let expires_at = token.expires_at().unwrap();
+        let expires_at = token.expires_at();
         assert!(expires_at < expires + Duration::seconds(1));
         assert!(expires_at > expires - Duration::seconds(1));
     }
@@ -200,8 +197,9 @@ mod tests {
     fn test_deserialise_no_time() {
         let s = r#"{"access_token":"abc123"}"#;
         let token: Token = serde_json::from_str(s).unwrap();
+        let expires = OffsetDateTime::now_utc() + Duration::seconds(3600);
 
-        assert_eq!(token.as_str(), "abc123");
-        assert!(token.expires_at().is_none());
+        assert!(token.expires_at() < expires + Duration::seconds(1));
+        assert!(token.expires_at() > expires - Duration::seconds(1));
     }
 }
