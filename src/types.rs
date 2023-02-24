@@ -36,7 +36,7 @@ impl Token {
         Token {
             inner: Arc::new(InnerToken {
                 access_token,
-                expires_at: default_token_expiry(),
+                expires_at: OffsetDateTime::now_utc() + Duration::seconds(3600),
             }),
         }
     }
@@ -55,7 +55,6 @@ impl fmt::Debug for Token {
 struct InnerToken {
     access_token: String,
     #[serde(
-        default = "default_token_expiry",
         deserialize_with = "deserialize_time",
         rename(deserialize = "expires_in")
     )]
@@ -135,10 +134,6 @@ impl fmt::Debug for Signer {
     }
 }
 
-fn default_token_expiry() -> OffsetDateTime {
-    OffsetDateTime::now_utc() + Duration::seconds(3600)
-}
-
 fn deserialize_time<'de, D>(deserializer: D) -> Result<OffsetDateTime, D::Error>
 where
     D: Deserializer<'de>,
@@ -194,12 +189,13 @@ mod tests {
     }
 
     #[test]
-    fn test_deserialise_no_time() {
-        let s = r#"{"access_token":"abc123"}"#;
-        let token: Token = serde_json::from_str(s).unwrap();
+    fn test_token_from_string() {
+        let s = String::from("abc123");
+        let token = Token::from_string(s);
         let expires = OffsetDateTime::now_utc() + Duration::seconds(3600);
 
         assert_eq!(token.as_str(), "abc123");
+        assert!(!token.has_expired());
         assert!(token.expires_at() < expires + Duration::seconds(1));
         assert!(token.expires_at() > expires - Duration::seconds(1));
     }
