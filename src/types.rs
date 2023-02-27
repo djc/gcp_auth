@@ -16,7 +16,7 @@ use crate::Error;
 /// The default number of seconds that it takes for a Google Cloud auth token to expire.
 /// This appears to be the default from practical testing, but we have not found evidence
 /// that this will always be the default duration.
-pub(crate) const DEFAULT_TOKEN_DURATION: i64 = 3600;
+pub(crate) const DEFAULT_TOKEN_DURATION: Duration = Duration::seconds(3600);
 
 /// Represents an access token. All access tokens are Bearer tokens.
 ///
@@ -196,8 +196,8 @@ mod tests {
     #[test]
     fn test_token_from_string() {
         let s = String::from("abc123");
-        let token = Token::from_string(s, Duration::seconds(DEFAULT_TOKEN_DURATION));
-        let expires = OffsetDateTime::now_utc() + Duration::seconds(DEFAULT_TOKEN_DURATION);
+        let token = Token::from_string(s, DEFAULT_TOKEN_DURATION);
+        let expires = OffsetDateTime::now_utc() + DEFAULT_TOKEN_DURATION;
 
         assert_eq!(token.as_str(), "abc123");
         assert!(!token.has_expired());
