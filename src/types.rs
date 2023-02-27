@@ -13,6 +13,11 @@ use time::{Duration, OffsetDateTime};
 
 use crate::Error;
 
+/// The default number of seconds that it takes for a Google Cloud auth token to expire.
+/// This appears to be the default from practical testing, but we have not found evidence
+/// that this will always be the default duration.
+pub(crate) const DEFAULT_TOKEN_DURATION: i64 = 3600;
+
 /// Represents an access token. All access tokens are Bearer tokens.
 ///
 /// Tokens should not be cached, the [`AuthenticationManager`] handles the correct caching
@@ -32,11 +37,11 @@ pub struct Token {
 }
 
 impl Token {
-    pub(crate) fn from_string(access_token: String) -> Self {
+    pub(crate) fn from_string(access_token: String, expires_in: Duration) -> Self {
         Token {
             inner: Arc::new(InnerToken {
                 access_token,
-                expires_at: OffsetDateTime::now_utc() + Duration::seconds(3600),
+                expires_at: OffsetDateTime::now_utc() + expires_in,
             }),
         }
     }
@@ -191,8 +196,8 @@ mod tests {
     #[test]
     fn test_token_from_string() {
         let s = String::from("abc123");
-        let token = Token::from_string(s);
-        let expires = OffsetDateTime::now_utc() + Duration::seconds(3600);
+        let token = Token::from_string(s, Duration::seconds(DEFAULT_TOKEN_DURATION));
+        let expires = OffsetDateTime::now_utc() + Duration::seconds(DEFAULT_TOKEN_DURATION);
 
         assert_eq!(token.as_str(), "abc123");
         assert!(!token.has_expired());
