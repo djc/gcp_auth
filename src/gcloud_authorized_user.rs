@@ -3,12 +3,13 @@ use std::process::Command;
 use std::sync::RwLock;
 
 use async_trait::async_trait;
+use time::Duration;
 use which::which;
 
 use crate::authentication_manager::ServiceAccount;
 use crate::error::Error;
 use crate::error::Error::{GCloudError, GCloudNotFound, GCloudParseError};
-use crate::types::HyperClient;
+use crate::types::{HyperClient, DEFAULT_TOKEN_DURATION};
 use crate::Token;
 
 #[derive(Debug)]
@@ -31,10 +32,10 @@ impl GCloudAuthorizedUser {
     }
 
     fn token(gcloud: &Path) -> Result<Token, Error> {
-        Ok(Token::from_string(run(
-            gcloud,
-            &["auth", "print-access-token", "--quiet"],
-        )?))
+        Ok(Token::from_string(
+            run(gcloud, &["auth", "print-access-token", "--quiet"])?,
+            Duration::seconds(DEFAULT_TOKEN_DURATION),
+        ))
     }
 }
 
