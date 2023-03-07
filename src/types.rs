@@ -192,16 +192,4 @@ mod tests {
         assert!(expires_at < expires + Duration::seconds(1));
         assert!(expires_at > expires - Duration::seconds(1));
     }
-
-    #[test]
-    fn test_token_from_string() {
-        let s = String::from("abc123");
-        let token = Token::from_string(s, DEFAULT_TOKEN_DURATION);
-        let expires = OffsetDateTime::now_utc() + DEFAULT_TOKEN_DURATION;
-
-        assert_eq!(token.as_str(), "abc123");
-        assert!(!token.has_expired());
-        assert!(token.expires_at() < expires + Duration::seconds(1));
-        assert!(token.expires_at() > expires - Duration::seconds(1));
-    }
 }

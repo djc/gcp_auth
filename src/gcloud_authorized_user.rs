@@ -73,6 +73,8 @@ fn run(gcloud: &Path, cmd: &[&str]) -> Result<String, Error> {
 
 #[cfg(test)]
 mod tests {
+    use time::{Duration, OffsetDateTime};
+
     use super::*;
 
     #[tokio::test]
@@ -80,6 +82,29 @@ mod tests {
     async fn gcloud() {
         let gcloud = GCloudAuthorizedUser::new().await.unwrap();
         println!("{:?}", gcloud.project_id);
-        println!("{:?}", gcloud.get_token(&[""]));
+        if let Some(t) = gcloud.get_token(&[""]) {
+            let expires = OffsetDateTime::now_utc() + DEFAULT_TOKEN_DURATION;
+            println!("{:?}", t);
+            assert!(!t.has_expired());
+            assert!(t.expires_at() < expires + Duration::seconds(1));
+            assert!(t.expires_at() > expires - Duration::seconds(1));
+        } else {
+            panic!("GCloud Authorized User failed to get a token");
+        }
+    }
+
+    /// `gcloud_authorized_user` is the only user type to get a token that isn't deserialized from
+    /// JSON, and that doesn't include an expiry time. As such, the default token expiry time
+    /// functionality is tested here.
+    #[test]
+    fn test_token_from_string() {
+        let s = String::from("abc123");
+        let token = Token::from_string(s, DEFAULT_TOKEN_DURATION);
+        let expires = OffsetDateTime::now_utc() + DEFAULT_TOKEN_DURATION;
+
+        assert_eq!(token.as_str(), "abc123");
+        assert!(!token.has_expired());
+        assert!(token.expires_at() < expires + Duration::seconds(1));
+        assert!(token.expires_at() > expires - Duration::seconds(1));
     }
 }
