@@ -12,12 +12,6 @@ use serde::{Deserialize, Serialize};
 use time::{Duration, OffsetDateTime};
 
 use crate::Error;
-
-/// The default number of seconds that it takes for a Google Cloud auth token to expire.
-/// This appears to be the default from practical testing, but we have not found evidence
-/// that this will always be the default duration.
-pub(crate) const DEFAULT_TOKEN_DURATION: Duration = Duration::seconds(3600);
-
 /// Represents an access token. All access tokens are Bearer tokens.
 ///
 /// Tokens should not be cached, the [`AuthenticationManager`] handles the correct caching
