@@ -3,13 +3,19 @@ use std::process::Command;
 use std::sync::RwLock;
 
 use async_trait::async_trait;
+use time::Duration;
 use which::which;
 
 use crate::authentication_manager::ServiceAccount;
 use crate::error::Error;
 use crate::error::Error::{GCloudError, GCloudNotFound, GCloudParseError};
-use crate::types::{HyperClient, DEFAULT_TOKEN_DURATION};
+use crate::types::HyperClient;
 use crate::Token;
+
+/// The default number of seconds that it takes for a Google Cloud auth token to expire.
+/// This appears to be the default from practical testing, but we have not found evidence
+/// that this will always be the default duration.
+pub(crate) const DEFAULT_TOKEN_DURATION: Duration = Duration::seconds(3600);
 
 #[derive(Debug)]
 pub(crate) struct GCloudAuthorizedUser {
@@ -106,5 +112,14 @@ mod tests {
         assert!(!token.has_expired());
         assert!(token.expires_at() < expires + Duration::seconds(1));
         assert!(token.expires_at() > expires - Duration::seconds(1));
+    }
+
+    #[test]
+    fn test_deserialise_no_time() {
+        let s = r#"{"access_token":"abc123"}"#;
+        let result = serde_json::from_str::<Token>(s)
+            .expect_err("Deserialization from JSON should fail when no expiry_time is included");
+
+        assert!(result.is_data());
     }
 }
