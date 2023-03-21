@@ -18,7 +18,7 @@ providing authentication using service accounts. Once authenticated, the service
 account can be used to acquire bearer tokens for use in authenticating against GCP
 services.
 
-The library supports the following methods of retrieving tokens:
+The library supports the following methods of retrieving tokens in the listed priority order:
 
 1. Reading custom service account credentials from the path pointed to by the
    `GOOGLE_APPLICATION_CREDENTIALS` environment variable. Alternatively, custom service
