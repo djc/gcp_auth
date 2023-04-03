@@ -19,9 +19,9 @@ async-trait = "0.1"
 base64 = "0.21"
 dirs-next = "2.0"
 hyper = { version = "0.14.2", features = ["client", "runtime", "http2"] }
-hyper-rustls = { version = "0.23.0", default-features = false, features = ["tokio-runtime", "http1", "http2"] }
+hyper-rustls = { version = "0.24", default-features = false, features = ["tokio-runtime", "http1", "http2"] }
 ring = "0.16.20"
-rustls = "0.20.2"
+rustls = "0.21"
 rustls-pemfile = "1.0.0"
 serde = {version = "1.0", features = ["derive", "rc"]}
 serde_json = "1.0"
