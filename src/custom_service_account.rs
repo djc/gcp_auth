@@ -92,14 +92,19 @@ impl ServiceAccount for CustomServiceAccount {
         self.tokens.read().unwrap().get(&key).cloned()
     }
 
+    fn get_token_with_subject(&self, scopes: &[&str], _subject: Option<&str>) -> Option<Token> {
+        let key: Vec<_> = scopes.iter().map(|x| x.to_string()).collect();
+        self.tokens.read().unwrap().get(&key).cloned()
+    }
+
     #[tracing::instrument]
-    async fn refresh_token(&self, client: &HyperClient, scopes: &[&str]) -> Result<Token, Error> {
+    async fn refresh_token(&self, client: &HyperClient, scopes: &[&str], subject: Option<&str>) -> Result<Token, Error> {
         use crate::jwt::Claims;
         use crate::jwt::GRANT_TYPE;
         use hyper::header;
         use url::form_urlencoded;
 
-        let jwt = Claims::new(&self.credentials, scopes, None).to_jwt(&self.signer)?;
+        let jwt = Claims::new(&self.credentials, scopes, subject).to_jwt(&self.signer)?;
         let rqbody = form_urlencoded::Serializer::new(String::new())
             .extend_pairs(&[("grant_type", GRANT_TYPE), ("assertion", jwt.as_str())])
             .finish();

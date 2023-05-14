@@ -54,7 +54,11 @@ impl ServiceAccount for GCloudAuthorizedUser {
         Some(self.token.read().unwrap().clone())
     }
 
-    async fn refresh_token(&self, _client: &HyperClient, _scopes: &[&str]) -> Result<Token, Error> {
+    fn get_token_with_subject(&self, _scopes: &[&str], _subject: Option<&str>) -> Option<Token> {
+        Some(self.token.read().unwrap().clone())
+    }
+
+    async fn refresh_token(&self, _client: &HyperClient, _scopes: &[&str], _subject: Option<&str>) -> Result<Token, Error> {
         let token = Self::token(&self.gcloud)?;
         *self.token.write().unwrap() = token.clone();
         Ok(token)

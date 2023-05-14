@@ -12,7 +12,8 @@ use crate::types::{self, HyperClient, Token};
 pub(crate) trait ServiceAccount: Send + Sync {
     async fn project_id(&self, client: &HyperClient) -> Result<String, Error>;
     fn get_token(&self, scopes: &[&str]) -> Option<Token>;
-    async fn refresh_token(&self, client: &HyperClient, scopes: &[&str]) -> Result<Token, Error>;
+    fn get_token_with_subject(&self, scopes: &[&str], subject: Option<&str>) -> Option<Token>;
+    async fn refresh_token(&self, client: &HyperClient, scopes: &[&str], subject: Option<&str>) -> Result<Token, Error>;
 }
 
 /// Authentication manager is responsible for caching and obtaing credentials for the required scope
@@ -90,6 +91,14 @@ impl AuthenticationManager {
     ///
     /// Token can be used in the request authorization header in format "Bearer {token}"
     pub async fn get_token(&self, scopes: &[&str]) -> Result<Token, Error> {
+        self.get_token_with_subject(scopes, None).await
+    }
+
+    /// Requests Bearer token for the provided scope and subject
+    ///
+    /// Token can be used in the request authorization header in format "Bearer {token}"
+    /// Subject is the email address of the user for which the application is requesting delegated access.
+    pub async fn get_token_with_subject(&self, scopes: &[&str], subject: Option<&str>) -> Result<Token, Error> {
         let token = self.service_account.get_token(scopes);
         if let Some(token) = token.filter(|token| !token.has_expired()) {
             return Ok(token);
@@ -98,15 +107,16 @@ impl AuthenticationManager {
         let _guard = self.refresh_mutex.lock().await;
 
         // Check if refresh happened while we were waiting.
-        let token = self.service_account.get_token(scopes);
+        let token = self.service_account.get_token_with_subject(scopes, subject);
         if let Some(token) = token.filter(|token| !token.has_expired()) {
             return Ok(token);
         }
 
         self.service_account
-            .refresh_token(&self.client, scopes)
+            .refresh_token(&self.client, scopes, subject)
             .await
     }
+    
 
     /// Request the project ID for the authenticating account
     ///
