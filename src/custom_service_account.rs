@@ -104,18 +104,30 @@ impl ServiceAccount for CustomServiceAccount {
             .extend_pairs(&[("grant_type", GRANT_TYPE), ("assertion", jwt.as_str())])
             .finish();
 
-        let request = hyper::Request::post(&self.credentials.token_uri)
-            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
-            .body(hyper::Body::from(rqbody))
-            .unwrap();
+        let mut retries = 0;
+        let response = loop {
+            let request = hyper::Request::post(&self.credentials.token_uri)
+                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .body(hyper::Body::from(rqbody.clone()))
+                .unwrap();
 
-        tracing::debug!("requesting token from service account: {:?}", request);
-        let token = client
-            .request(request)
-            .await
-            .map_err(Error::OAuthConnectionError)?
-            .deserialize::<Token>()
-            .await?;
+            tracing::debug!("requesting token from service account: {request:?}");
+            let err = match client.request(request).await {
+                // Early return when the request succeeds
+                Ok(response) => break response,
+                Err(err) => err,
+            };
+
+            tracing::warn!(
+                "Failed to refresh token with GCP oauth2 token endpoint: {err}, trying again..."
+            );
+            retries += 1;
+            if retries >= RETRY_COUNT {
+                return Err(Error::OAuthConnectionError(err));
+            }
+        };
+
+        let token = response.deserialize::<Token>().await?;
 
         let key = scopes.iter().map(|x| (*x).to_string()).collect();
         self.tokens.write().unwrap().insert(key, token.clone());
@@ -154,3 +166,6 @@ impl fmt::Debug for ApplicationCredentials {
             .finish()
     }
 }
+
+/// How many times to attempt to fetch a token from the set credentials token endpoint.
+const RETRY_COUNT: u8 = 5;

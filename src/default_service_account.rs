@@ -36,15 +36,27 @@ impl DefaultServiceAccount {
 
     #[tracing::instrument]
     async fn get_token(client: &HyperClient) -> Result<Token, Error> {
+        let mut retries = 0;
         tracing::debug!("Getting token from GCP instance metadata server");
-        let req = Self::build_token_request(Self::DEFAULT_TOKEN_GCP_URI);
-        let token = client
-            .request(req)
-            .await
-            .map_err(Error::ConnectionError)?
-            .deserialize()
-            .await?;
-        Ok(token)
+        let response = loop {
+            let req = Self::build_token_request(Self::DEFAULT_TOKEN_GCP_URI);
+
+            let err = match client.request(req).await {
+                // Early return when the request succeeds
+                Ok(response) => break response,
+                Err(err) => err,
+            };
+
+            tracing::warn!(
+                "Failed to get token from GCP instance metadata server: {err}, trying again..."
+            );
+            retries += 1;
+            if retries >= RETRY_COUNT {
+                return Err(Error::ConnectionError(err));
+            }
+        };
+
+        response.deserialize().await.map_err(Into::into)
     }
 }
 
@@ -75,3 +87,6 @@ impl ServiceAccount for DefaultServiceAccount {
         Ok(token)
     }
 }
+
+/// How many times to attempt to fetch a token from the GCP metadata server.
+const RETRY_COUNT: u8 = 5;
