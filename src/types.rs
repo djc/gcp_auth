@@ -65,8 +65,14 @@ impl Token {
     ///
     /// This takes an additional 30s margin to ensure the token can still be reasonably used
     /// instead of expiring right after having checked.
+    ///
+    /// Note:
+    /// The official Python implementation uses 20s and states it should be no more than 30s.
+    /// The official Go implementation uses 10s (0s for the metadata server).
+    /// The docs state, the metadata server caches tokens until 5 minutes before expiry.
+    /// We use 20s to be on the safe side.
     pub fn has_expired(&self) -> bool {
-        self.inner.expires_at - Duration::seconds(30) <= OffsetDateTime::now_utc()
+        self.inner.expires_at - Duration::seconds(20) <= OffsetDateTime::now_utc()
     }
 
     /// Get str representation of the token.
