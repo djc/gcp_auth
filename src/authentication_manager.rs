@@ -15,7 +15,8 @@ pub(crate) trait ServiceAccount: Send + Sync {
     async fn refresh_token(&self, client: &HyperClient, scopes: &[&str]) -> Result<Token, Error>;
 }
 
-/// Authentication manager is responsible for caching and obtaing credentials for the required scope
+/// Authentication manager is responsible for caching and obtaining credentials for the required
+/// scope
 ///
 /// Construct the authentication manager with [`AuthenticationManager::new()`] or by creating
 /// a [`CustomServiceAccount`], then converting it into an `AuthenticationManager` using the `From`
