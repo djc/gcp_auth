@@ -48,20 +48,31 @@ impl DefaultAuthorizedUser {
 
     #[tracing::instrument]
     async fn get_token(cred: &UserCredentials, client: &HyperClient) -> Result<Token, Error> {
-        let req = Self::build_token_request(&RefreshRequest {
-            client_id: &cred.client_id,
-            client_secret: &cred.client_secret,
-            grant_type: "refresh_token",
-            refresh_token: &cred.refresh_token,
-        });
+        let mut retries = 0;
+        let response = loop {
+            let req = Self::build_token_request(&RefreshRequest {
+                client_id: &cred.client_id,
+                client_secret: &cred.client_secret,
+                grant_type: "refresh_token",
+                refresh_token: &cred.refresh_token,
+            });
 
-        let token = client
-            .request(req)
-            .await
-            .map_err(Error::OAuthConnectionError)?
-            .deserialize()
-            .await?;
-        Ok(token)
+            let err = match client.request(req).await {
+                // Early return when the request succeeds
+                Ok(response) => break response,
+                Err(err) => err,
+            };
+
+            tracing::warn!(
+                "Failed to get token from GCP oauth2 token endpoint: {err}, trying again..."
+            );
+            retries += 1;
+            if retries >= RETRY_COUNT {
+                return Err(Error::OAuthConnectionError(err));
+            }
+        };
+
+        response.deserialize().await.map_err(Into::into)
     }
 }
 
@@ -106,3 +117,6 @@ struct UserCredentials {
     /// Type
     pub(crate) r#type: String,
 }
+
+/// How many times to attempt to fetch a token from the GCP token endpoint.
+const RETRY_COUNT: u8 = 5;
