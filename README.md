@@ -23,10 +23,11 @@ The library supports the following methods of retrieving tokens in the listed pr
 1. Reading custom service account credentials from the path pointed to by the
    `GOOGLE_APPLICATION_CREDENTIALS` environment variable. Alternatively, custom service
    account credentials can be read from a JSON file or string.
-2. Retrieving a token from the `gcloud` CLI tool, if it is available on the `PATH`.
+2. Look for credentials in `.config/gcloud/application_default_credentials.json`;
+   if found, use these credentials to request refresh tokens. This file can be created
+   by invoking `gcloud auth application-default login`.
 3. Use the default service account by retrieving a token from the metadata server.
-4. Look for credentials in `.config/gcloud/application_default_credentials.json`;
-   if found, use these credentials to request refresh tokens.
+4. Retrieving a token from the `gcloud` CLI tool, if it is available on the `PATH`.
 
 For more detailed information and examples, see the [docs][docs-url].
 
