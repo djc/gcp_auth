@@ -34,12 +34,12 @@ impl AuthenticationManager {
     ///
     /// 1. Check if the `GOOGLE_APPLICATION_CREDENTIALS` environment variable if set;
     ///    if so, use a custom service account as the token source.
-    /// 2. Check if the `gcloud` tool is available on the `PATH`; if so, use the
-    ///    `gcloud auth print-access-token` command as the token source.
+    /// 2. Look for credentials in `.config/gcloud/application_default_credentials.json`;
+    ///    if found, use these credentials to request refresh tokens.
     /// 3. Send a HTTP request to the internal metadata server to retrieve a token;
     ///    if it succeeds, use the default service account as the token source.
-    /// 4. Look for credentials in `.config/gcloud/application_default_credentials.json`;
-    ///    if found, use these credentials to request refresh tokens.
+    /// 4. Check if the `gcloud` tool is available on the `PATH`; if so, use the
+    ///    `gcloud auth print-access-token` command as the token source.
     #[tracing::instrument]
     pub async fn new() -> Result<Self, Error> {
         tracing::debug!("Initializing gcp_auth");
@@ -48,9 +48,9 @@ impl AuthenticationManager {
         }
 
         let client = types::client();
-        let gcloud_error = match GCloudAuthorizedUser::new().await {
+        let default_user_error = match DefaultAuthorizedUser::new(&client).await {
             Ok(service_account) => {
-                tracing::debug!("Using GCloudAuthorizedUser");
+                tracing::debug!("Using DefaultAuthorizedUser");
                 return Ok(Self::build(client, service_account));
             }
             Err(e) => e,
@@ -64,9 +64,9 @@ impl AuthenticationManager {
             Err(e) => e,
         };
 
-        let default_user_error = match DefaultAuthorizedUser::new(&client).await {
+        let gcloud_error = match GCloudAuthorizedUser::new().await {
             Ok(service_account) => {
-                tracing::debug!("Using DefaultAuthorizedUser");
+                tracing::debug!("Using GCloudAuthorizedUser");
                 return Ok(Self::build(client, service_account));
             }
             Err(e) => e,
