@@ -91,7 +91,7 @@
 
 mod authentication_manager;
 mod custom_service_account;
-mod default_authorized_user;
+mod default_application_credentials;
 mod default_service_account;
 mod error;
 mod gcloud_authorized_user;
