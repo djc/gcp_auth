@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use tokio::sync::Mutex;
 
 use crate::custom_service_account::CustomServiceAccount;
-use crate::default_authorized_user::DefaultAuthorizedUser;
+use crate::default_authorized_user::ConfigDefaultCredentials;
 use crate::default_service_account::DefaultServiceAccount;
 use crate::error::Error;
 use crate::gcloud_authorized_user::GCloudAuthorizedUser;
@@ -48,9 +48,9 @@ impl AuthenticationManager {
         }
 
         let client = types::client();
-        let default_user_error = match DefaultAuthorizedUser::new(&client).await {
+        let default_user_error = match ConfigDefaultCredentials::new(&client).await {
             Ok(service_account) => {
-                tracing::debug!("Using DefaultAuthorizedUser");
+                tracing::debug!("Using ConfigDefaultCredentials");
                 return Ok(Self::build(client, service_account));
             }
             Err(e) => e,
