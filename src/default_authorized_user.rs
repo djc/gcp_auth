@@ -12,12 +12,12 @@ use crate::types::{HyperClient, Token};
 use crate::util::HyperExt;
 
 #[derive(Debug)]
-pub(crate) struct DefaultAuthorizedUser {
+pub(crate) struct ConfigDefaultCredentials {
     token: RwLock<Token>,
     credentials: UserCredentials,
 }
 
-impl DefaultAuthorizedUser {
+impl ConfigDefaultCredentials {
     const DEFAULT_TOKEN_GCP_URI: &'static str = "https://accounts.google.com/o/oauth2/token";
     const USER_CREDENTIALS_PATH: &'static str =
         ".config/gcloud/application_default_credentials.json";
@@ -77,7 +77,7 @@ impl DefaultAuthorizedUser {
 }
 
 #[async_trait]
-impl ServiceAccount for DefaultAuthorizedUser {
+impl ServiceAccount for ConfigDefaultCredentials {
     async fn project_id(&self, _: &HyperClient) -> Result<String, Error> {
         self.credentials
             .quota_project_id
