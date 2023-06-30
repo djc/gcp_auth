@@ -3,7 +3,7 @@ use tokio::sync::Mutex;
 
 use crate::custom_service_account::CustomServiceAccount;
 use crate::default_application_credentials::DefaultApplicationCredentials;
-use crate::default_service_account::DefaultServiceAccount;
+use crate::metadata_service_account::MetadataServiceAccount;
 use crate::error::Error;
 use crate::gcloud_authorized_user::GCloudAuthorizedUser;
 use crate::types::{self, HyperClient, Token};
@@ -56,9 +56,9 @@ impl AuthenticationManager {
             Err(e) => e,
         };
 
-        let default_service_error = match DefaultServiceAccount::new(&client).await {
+        let default_service_error = match MetadataServiceAccount::new(&client).await {
             Ok(service_account) => {
-                tracing::debug!("Using DefaultServiceAccount");
+                tracing::debug!("Using MetadataServiceAccount");
                 return Ok(Self::build(client, service_account));
             }
             Err(e) => e,
