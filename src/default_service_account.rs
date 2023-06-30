@@ -11,11 +11,11 @@ use crate::types::{HyperClient, Token};
 use crate::util::HyperExt;
 
 #[derive(Debug)]
-pub(crate) struct DefaultServiceAccount {
+pub(crate) struct MetadataServiceAccount {
     token: RwLock<Token>,
 }
 
-impl DefaultServiceAccount {
+impl MetadataServiceAccount {
     const DEFAULT_PROJECT_ID_GCP_URI: &'static str =
         "http://metadata.google.internal/computeMetadata/v1/project/project-id";
     const DEFAULT_TOKEN_GCP_URI: &'static str = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token";
@@ -61,7 +61,7 @@ impl DefaultServiceAccount {
 }
 
 #[async_trait]
-impl ServiceAccount for DefaultServiceAccount {
+impl ServiceAccount for MetadataServiceAccount {
     async fn project_id(&self, client: &HyperClient) -> Result<String, Error> {
         tracing::debug!("Getting project ID from GCP instance metadata server");
         let req = Self::build_token_request(Self::DEFAULT_PROJECT_ID_GCP_URI);
