@@ -23,8 +23,8 @@ pub(crate) struct Claims<'a> {
 
 impl<'a> Claims<'a> {
     pub(crate) fn new<T>(
-        client_email: &'a str,
-        token_uri: &'a str,
+        iss: &'a str,
+        audience: &'a str,
         scopes: &[T],
         subject: Option<&'a str>,
     ) -> Self
@@ -40,8 +40,8 @@ impl<'a> Claims<'a> {
             .collect::<Vec<_>>()
             .join(" ");
         Claims {
-            iss: &client_email,
-            aud: &token_uri,
+            iss: &iss,
+            aud: &audience,
             exp: expiry,
             iat,
             subject,
