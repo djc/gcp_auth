@@ -99,7 +99,13 @@ impl ServiceAccount for CustomServiceAccount {
         use hyper::header;
         use url::form_urlencoded;
 
-        let jwt = Claims::new(&self.credentials, scopes, None).to_jwt(&self.signer)?;
+        let jwt = Claims::new(
+            &self.credentials.client_email,
+            &self.credentials.token_uri,
+            scopes,
+            None,
+        )
+        .to_jwt(&self.signer)?;
         let rqbody = form_urlencoded::Serializer::new(String::new())
             .extend_pairs(&[("grant_type", GRANT_TYPE), ("assertion", jwt.as_str())])
             .finish();

@@ -33,7 +33,7 @@ pub enum Error {
     /// Failed to parse the application credentials provided
     ///
     /// By default, the custom service account credentials are parsed from the path pointed to by the
-    /// `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
+    /// `GOOGLE_APPLICATION_CREDENTIALS` environment variable or `~/.config/gcloud/application_default_credentials.json`
     #[error("Application profile provided in `GOOGLE_APPLICATION_CREDENTIALS` was not parsable")]
     CustomServiceAccountCredentials(#[source] serde_json::error::Error),
 
@@ -95,6 +95,10 @@ pub enum Error {
     /// GCloud output couldn't be parsed
     #[error("Failed to parse output of GCloud")]
     GCloudParseError,
+
+    /// Currently, nested service account impersonation is not supported
+    #[error("Nested impersonation is not supported")]
+    NestedImpersonation,
 
     /// Represents all other cases of `std::io::Error`.
     #[error(transparent)]

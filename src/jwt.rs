@@ -3,7 +3,6 @@
 use base64::{engine::general_purpose::URL_SAFE, Engine};
 use serde::Serialize;
 
-use crate::custom_service_account::ApplicationCredentials;
 use crate::error::Error;
 use crate::types::Signer;
 
@@ -24,7 +23,8 @@ pub(crate) struct Claims<'a> {
 
 impl<'a> Claims<'a> {
     pub(crate) fn new<T>(
-        key: &'a ApplicationCredentials,
+        client_email: &'a str,
+        token_uri: &'a str,
         scopes: &[T],
         subject: Option<&'a str>,
     ) -> Self
@@ -40,8 +40,8 @@ impl<'a> Claims<'a> {
             .collect::<Vec<_>>()
             .join(" ");
         Claims {
-            iss: &key.client_email,
-            aud: &key.token_uri,
+            iss: &client_email,
+            aud: &token_uri,
             exp: expiry,
             iat,
             subject,

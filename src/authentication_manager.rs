@@ -2,9 +2,9 @@ use async_trait::async_trait;
 use tokio::sync::Mutex;
 
 use crate::custom_service_account::CustomServiceAccount;
-use crate::default_authorized_user::ConfigDefaultCredentials;
 use crate::default_service_account::MetadataServiceAccount;
 use crate::error::Error;
+use crate::flexible_token_source::FlexibleCredentials;
 use crate::gcloud_authorized_user::GCloudAuthorizedUser;
 use crate::types::{self, HyperClient, Token};
 
@@ -43,14 +43,15 @@ impl AuthenticationManager {
     #[tracing::instrument]
     pub async fn new() -> Result<Self, Error> {
         tracing::debug!("Initializing gcp_auth");
-        if let Some(service_account) = CustomServiceAccount::from_env()? {
-            return Ok(service_account.into());
+        let client = types::client();
+        if let Some(service_account) = FlexibleCredentials::from_env().await? {
+            tracing::debug!("Using FlexibleCredentials from GOOGLE_APPLICATION_CREDENTIALS");
+            return Ok(Self::build(client, service_account));
         }
 
-        let client = types::client();
-        let default_user_error = match ConfigDefaultCredentials::new(&client).await {
+        let default_user_error = match FlexibleCredentials::from_default_credentials().await {
             Ok(service_account) => {
-                tracing::debug!("Using ConfigDefaultCredentials");
+                tracing::debug!("Using FlexibleCredentials from default user credential file");
                 return Ok(Self::build(client, service_account));
             }
             Err(e) => e,
