@@ -11,6 +11,9 @@ use crate::error::Error;
 use crate::types::{HyperClient, Signer, Token};
 use crate::util::HyperExt;
 
+// Comes from https://github.com/golang/oauth2/blob/a835fc4358f6852f50c4c5c33fddcd1adade5b0a/google/google.go#L25
+const DEFAULT_TOKEN_URI: &str = "https://oauth2.googleapis.com/token";
+
 /// A custom service account containing credentials
 ///
 /// Once initialized, a [`CustomServiceAccount`] can be converted into an [`AuthenticationManager`]
@@ -54,7 +57,7 @@ impl CustomServiceAccount {
         }
     }
 
-    fn new(credentials: ApplicationCredentials) -> Result<Self, Error> {
+    pub(crate) fn new(credentials: ApplicationCredentials) -> Result<Self, Error> {
         Ok(Self {
             signer: Signer::new(&credentials.private_key)?,
             credentials,
@@ -88,7 +91,8 @@ impl ServiceAccount for CustomServiceAccount {
     }
 
     fn get_token(&self, scopes: &[&str]) -> Option<Token> {
-        let key: Vec<_> = scopes.iter().map(|x| x.to_string()).collect();
+        let mut key: Vec<_> = scopes.iter().map(|x| x.to_string()).collect();
+        key.sort();
         self.tokens.read().unwrap().get(&key).cloned()
     }
 
@@ -106,7 +110,7 @@ impl ServiceAccount for CustomServiceAccount {
 
         let mut retries = 0;
         let response = loop {
-            let request = hyper::Request::post(&self.credentials.token_uri)
+            let request = hyper::Request::post(self.credentials.token_uri())
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(hyper::Body::from(rqbody.clone()))
                 .unwrap();
@@ -137,7 +141,6 @@ impl ServiceAccount for CustomServiceAccount {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub(crate) struct ApplicationCredentials {
-    pub(crate) r#type: Option<String>,
     /// project_id
     pub(crate) project_id: Option<String>,
     /// private_key_id
@@ -151,11 +154,23 @@ pub(crate) struct ApplicationCredentials {
     /// auth_uri
     pub(crate) auth_uri: Option<String>,
     /// token_uri
-    pub(crate) token_uri: String,
+    pub(crate) token_uri: Option<String>,
     /// auth_provider_x509_cert_url
     pub(crate) auth_provider_x509_cert_url: Option<String>,
     /// client_x509_cert_url
     pub(crate) client_x509_cert_url: Option<String>,
+    /// audience (defaults to token_uri if missing)
+    pub(crate) audience: Option<String>,
+}
+
+impl ApplicationCredentials {
+    fn token_uri(&self) -> &str {
+        self.token_uri.as_deref().unwrap_or(DEFAULT_TOKEN_URI)
+    }
+
+    pub(crate) fn audience(&self) -> &str {
+        self.audience.as_deref().unwrap_or_else(|| self.token_uri())
+    }
 }
 
 impl fmt::Debug for ApplicationCredentials {

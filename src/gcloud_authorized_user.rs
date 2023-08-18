@@ -3,7 +3,7 @@ use std::process::Command;
 use std::sync::RwLock;
 
 use async_trait::async_trait;
-use time::Duration;
+use time::{Duration, OffsetDateTime};
 use which::which;
 
 use crate::authentication_manager::ServiceAccount;
@@ -37,9 +37,9 @@ impl GCloudAuthorizedUser {
     }
 
     fn token(gcloud: &Path) -> Result<Token, Error> {
-        Ok(Token::from_string(
+        Ok(Token::new(
             run(gcloud, &["auth", "print-access-token", "--quiet"])?,
-            DEFAULT_TOKEN_DURATION,
+            OffsetDateTime::now_utc() + DEFAULT_TOKEN_DURATION,
         ))
     }
 }
@@ -105,7 +105,7 @@ mod tests {
     #[test]
     fn test_token_from_string() {
         let s = String::from("abc123");
-        let token = Token::from_string(s, DEFAULT_TOKEN_DURATION);
+        let token = Token::new(s, OffsetDateTime::now_utc() + DEFAULT_TOKEN_DURATION);
         let expires = OffsetDateTime::now_utc() + DEFAULT_TOKEN_DURATION;
 
         assert_eq!(token.as_str(), "abc123");
