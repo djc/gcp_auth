@@ -158,11 +158,17 @@ pub(crate) struct ApplicationCredentials {
     pub(crate) auth_provider_x509_cert_url: Option<String>,
     /// client_x509_cert_url
     pub(crate) client_x509_cert_url: Option<String>,
+    /// audience (defaults to token_uri if missing)
+    pub(crate) audience: Option<String>,
 }
 
 impl ApplicationCredentials {
-    pub(crate) fn token_uri(&self) -> &str {
+    fn token_uri(&self) -> &str {
         self.token_uri.as_deref().unwrap_or(DEFAULT_TOKEN_URI)
+    }
+
+    pub(crate) fn audience(&self) -> &str {
+        self.audience.as_deref().unwrap_or_else(|| self.token_uri())
     }
 }
 
