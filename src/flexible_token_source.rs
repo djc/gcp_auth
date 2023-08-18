@@ -247,8 +247,8 @@ impl ImpersonatedServiceAccountCredentials {
             };
 
             tracing::warn!(
-                        "Failed to refresh impersonation token with service token endpoint {token_uri}: {err}, trying again..."
-                    );
+                "Failed to refresh impersonation token with service token endpoint {token_uri}: {err}, trying again..."
+            );
             retries += 1;
             if retries >= RETRY_COUNT {
                 return Err(Error::OAuthConnectionError(err));

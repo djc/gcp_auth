@@ -7,8 +7,9 @@ use ring::{
     rand::SystemRandom,
     signature::{RsaKeyPair, RSA_PKCS1_SHA256},
 };
-use serde::Deserializer;
+use serde::{de, Deserializer};
 use serde::{Deserialize, Serialize};
+use time::format_description::well_known::Iso8601;
 use time::{Duration, OffsetDateTime};
 
 use crate::Error;
@@ -52,10 +53,12 @@ impl fmt::Debug for Token {
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 struct InnerToken {
+    #[serde(alias = "accessToken")]
     access_token: String,
     #[serde(
         deserialize_with = "deserialize_time",
-        rename(deserialize = "expires_in")
+        rename(deserialize = "expires_in"),
+        alias = "expireTime"
     )]
     expires_at: OffsetDateTime,
 }
@@ -143,8 +146,27 @@ fn deserialize_time<'de, D>(deserializer: D) -> Result<OffsetDateTime, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let seconds_from_now: i64 = Deserialize::deserialize(deserializer)?;
-    Ok(OffsetDateTime::now_utc() + Duration::seconds(seconds_from_now))
+    // For impersonating service accounts, the token endpoint returns
+    // expiresTime: [iso8601] instead of the usual expires_in: [seconds]
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum SecondsOrTime {
+        Seconds(i64),
+        Time(String),
+    }
+
+    // First try to deserialize seconds
+    let time_options: SecondsOrTime = Deserialize::deserialize(deserializer)?;
+
+    match time_options {
+        SecondsOrTime::Seconds(seconds_from_now) => {
+            return Ok(OffsetDateTime::now_utc() + Duration::seconds(seconds_from_now));
+        }
+        SecondsOrTime::Time(time) => {
+            return Ok(OffsetDateTime::parse(time.as_str(), &Iso8601::PARSING)
+                .map_err(de::Error::custom)?);
+        }
+    }
 }
 
 pub(crate) fn client() -> HyperClient {
@@ -191,5 +213,12 @@ mod tests {
         let expires_at = token.expires_at();
         assert!(expires_at < expires + Duration::seconds(1));
         assert!(expires_at > expires - Duration::seconds(1));
+    }
+
+    #[test]
+    fn test_deserialize_real_life_camel_case() {
+        let resp_body = "{\n  \"accessToken\": \"secret_token\",\n  \"expireTime\": \"2023-08-18T04:09:45Z\"\n}";
+        let token: Token = serde_json::from_str(resp_body).expect("Failed to parse token");
+        assert_eq!(token.as_str(), "secret_token");
     }
 }
