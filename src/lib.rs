@@ -97,6 +97,7 @@ mod error;
 mod flexible_credential_source;
 mod gcloud_authorized_user;
 mod jwt;
+mod service_account_impersonation;
 mod types;
 mod util;
 
