@@ -29,10 +29,10 @@ impl ConfigDefaultCredentials {
         })
     }
 
-    fn build_token_request<T: serde::Serialize>(json: &T) -> Request<Body> {
+    fn build_token_request<T: serde::Serialize>(url: &str, json: &T) -> Request<Body> {
         Request::builder()
             .method(Method::POST)
-            .uri(Self::DEFAULT_TOKEN_GCP_URI)
+            .uri(url)
             .header("content-type", "application/json")
             .body(Body::from(serde_json::to_string(json).unwrap()))
             .unwrap()
@@ -42,12 +42,17 @@ impl ConfigDefaultCredentials {
     async fn get_token(cred: &UserCredentials, client: &HyperClient) -> Result<Token, Error> {
         let mut retries = 0;
         let response = loop {
-            let req = Self::build_token_request(&RefreshRequest {
-                client_id: &cred.client_id,
-                client_secret: &cred.client_secret,
-                grant_type: "refresh_token",
-                refresh_token: &cred.refresh_token,
-            });
+            let req = Self::build_token_request(
+                cred.token_uri
+                    .as_deref()
+                    .unwrap_or(Self::DEFAULT_TOKEN_GCP_URI),
+                &RefreshRequest {
+                    client_id: &cred.client_id,
+                    client_secret: &cred.client_secret,
+                    grant_type: "refresh_token",
+                    refresh_token: &cred.refresh_token,
+                },
+            );
 
             let err = match client.request(req).await {
                 // Early return when the request succeeds
@@ -106,6 +111,8 @@ pub(crate) struct UserCredentials {
     pub(crate) quota_project_id: Option<String>,
     /// Refresh Token
     pub(crate) refresh_token: String,
+    /// Token URI (defaults to DEFAULT_TOKEN_GCP_URI if missing)
+    pub(crate) token_uri: Option<String>,
 }
 
 /// How many times to attempt to fetch a token from the GCP token endpoint.
