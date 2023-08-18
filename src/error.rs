@@ -96,6 +96,10 @@ pub enum Error {
     #[error("Failed to parse output of GCloud")]
     GCloudParseError,
 
+    /// Currently, nested service account impersonation is not supported
+    #[error("Nested impersonation is not supported")]
+    NestedImpersonation,
+
     /// Represents all other cases of `std::io::Error`.
     #[error(transparent)]
     IOError(#[from] std::io::Error),
