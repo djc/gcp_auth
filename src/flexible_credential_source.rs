@@ -195,6 +195,14 @@ mod tests {
             "audience": "https://testservice.googleapis.com/"
         }"#;
 
+        let k2 = r#"{
+            "private_key_id": "268f54e43a1af97cfc71731688434f45aca15c8b",
+            "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC5M5y3WwsRk8NX\npF9fKaZukNspot9Ecmk1PAkupcHLKVhalwPxU4sMNWXgM9H2LTWSvvyOT//rDQpn\n3SGYri/lMhzb4lI8h10E7k6zyFQUPujxkXFBkMOzhIDUgtiiht0WvIw6M8nbaPqI\nxn/aYmPsFhvJfKCthYAt2UUz+D3enI9QjCuhic8iSMnvKT8m0QkOG2eALYGUaLF1\ngRkbV4BiBUGZfXfNEBdux3Wf4kNUau32LA0XotomlvNvf1oH77v5Hc1R/KMMIk5F\nJWVBuAr4jwkN9hwtOozpJ/52wSpddxsZuj+0nP1a3f0UyvrmMnuwszardPK39BoH\nJ+5+HZM3AgMBAAECggEADrHZrXK73hkrVrjkGFjlq8Ayo4sYzAWH84Ff+SONzODq\n8cUpuuw2DDHwc2mpLy9HIO2mfGQ8mhneyX7yO3sWscjYIVpDzCmxZ8LA2+L5SOH0\n+bXglqM14/iPgE0hg0PQJw2u0q9pRM9/kXquilVkOEdIzSPmW95L3Vdv9j+sKQ2A\nOL23l4dsaG4+i1lWRBKiGsLh1kB9FRnm4BzcOxd3WGooy7L1/jo9BoYRss1YABls\nmmyZ9f7r28zjclhpOBkE3OXX0zNbp4yIu1O1Bt9X2p87EOuYqlFA5eEvDbiTPZbk\n6wKEX3BPUkeIo8OaGvsGhHCWx0lv/sDPw/UofycOgQKBgQD4BD059aXEV13Byc5D\nh8LQSejjeM/Vx+YeCFI66biaIOvUs+unyxkH+qxXTuW6AgOgcvrJo93xkyAZ9SeR\nc6Vj9g5mZ5vqSJz5Hg8h8iZBAYtf40qWq0pHcmUIm2Z9LvrG5ZFHU5EEcCtLyBVS\nAv+pLLLf3OsAkJuuqTAgygBbOwKBgQC/KcBa9sUg2u9qIpq020UOW/n4KFWhSJ8h\ngXqqmjOnPqmDc5AnYg1ZdYdqSSgdiK8lJpRL/S2UjYUQp3H+56z0eK/b1iKM51n+\n6D80nIxWeKJ+n7VKI7cBXwc/KokaXgkz0It2UEZSlhPUMImnYcOvGIZ7cMr3Q6mf\n6FwD15UQNQKBgQDyAsDz454DvvS/+noJL1qMAPL9tI+pncwQljIXRqVZ0LIO9hoH\nu4kLXjH5aAWGwhxj3o6VYA9cgSIb8jrQFbbXmexnRMbBkGWMOSavCykE2cr0oEfS\nSgbLPPcVtP4HPWZ72tsubH7fg8zbv7v+MOrkW7eX9mxiOrmPb4yFElfSrQKBgA7y\nMLvr91WuSHG/6uChFDEfN9gTLz7A8tAn03NrQwace5xveKHbpLeN3NyOg7hra2Y4\nMfgO/3VR60l2Dg+kBX3HwdgqUeE6ZWrstaRjaQWJwQqtafs196T/zQ0/QiDxoT6P\n25eQhy8F1N8OPHT9y9Lw0/LqyrOycpyyCh+yx1DRAoGAJ/6dlhyQnwSfMAe3mfRC\noiBQG6FkyoeXHHYcoQ/0cSzwp0BwBlar1Z28P7KTGcUNqV+YfK9nF47eoLaTLCmG\nG5du0Ds6m2Eg0sOBBqXHnw6R1PC878tgT/XokNxIsVlF5qRz88q7Rn0J1lzB7+Tl\n2HSAcyIUcmr0gxlhRmC2Jq4=\n-----END PRIVATE KEY-----\n",
+            "client_email": "gopher@developer.gserviceaccount.com",
+            "client_id": "gopher.apps.googleusercontent.com",
+            "type": "service_account"
+        }"#;
+
         let k3 = r#"{
             "private_key_id": "268f54e43a1af97cfc71731688434f45aca15c8b",
             "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC5M5y3WwsRk8NX\npF9fKaZukNspot9Ecmk1PAkupcHLKVhalwPxU4sMNWXgM9H2LTWSvvyOT//rDQpn\n3SGYri/lMhzb4lI8h10E7k6zyFQUPujxkXFBkMOzhIDUgtiiht0WvIw6M8nbaPqI\nxn/aYmPsFhvJfKCthYAt2UUz+D3enI9QjCuhic8iSMnvKT8m0QkOG2eALYGUaLF1\ngRkbV4BiBUGZfXfNEBdux3Wf4kNUau32LA0XotomlvNvf1oH77v5Hc1R/KMMIk5F\nJWVBuAr4jwkN9hwtOozpJ/52wSpddxsZuj+0nP1a3f0UyvrmMnuwszardPK39BoH\nJ+5+HZM3AgMBAAECggEADrHZrXK73hkrVrjkGFjlq8Ayo4sYzAWH84Ff+SONzODq\n8cUpuuw2DDHwc2mpLy9HIO2mfGQ8mhneyX7yO3sWscjYIVpDzCmxZ8LA2+L5SOH0\n+bXglqM14/iPgE0hg0PQJw2u0q9pRM9/kXquilVkOEdIzSPmW95L3Vdv9j+sKQ2A\nOL23l4dsaG4+i1lWRBKiGsLh1kB9FRnm4BzcOxd3WGooy7L1/jo9BoYRss1YABls\nmmyZ9f7r28zjclhpOBkE3OXX0zNbp4yIu1O1Bt9X2p87EOuYqlFA5eEvDbiTPZbk\n6wKEX3BPUkeIo8OaGvsGhHCWx0lv/sDPw/UofycOgQKBgQD4BD059aXEV13Byc5D\nh8LQSejjeM/Vx+YeCFI66biaIOvUs+unyxkH+qxXTuW6AgOgcvrJo93xkyAZ9SeR\nc6Vj9g5mZ5vqSJz5Hg8h8iZBAYtf40qWq0pHcmUIm2Z9LvrG5ZFHU5EEcCtLyBVS\nAv+pLLLf3OsAkJuuqTAgygBbOwKBgQC/KcBa9sUg2u9qIpq020UOW/n4KFWhSJ8h\ngXqqmjOnPqmDc5AnYg1ZdYdqSSgdiK8lJpRL/S2UjYUQp3H+56z0eK/b1iKM51n+\n6D80nIxWeKJ+n7VKI7cBXwc/KokaXgkz0It2UEZSlhPUMImnYcOvGIZ7cMr3Q6mf\n6FwD15UQNQKBgQDyAsDz454DvvS/+noJL1qMAPL9tI+pncwQljIXRqVZ0LIO9hoH\nu4kLXjH5aAWGwhxj3o6VYA9cgSIb8jrQFbbXmexnRMbBkGWMOSavCykE2cr0oEfS\nSgbLPPcVtP4HPWZ72tsubH7fg8zbv7v+MOrkW7eX9mxiOrmPb4yFElfSrQKBgA7y\nMLvr91WuSHG/6uChFDEfN9gTLz7A8tAn03NrQwace5xveKHbpLeN3NyOg7hra2Y4\nMfgO/3VR60l2Dg+kBX3HwdgqUeE6ZWrstaRjaQWJwQqtafs196T/zQ0/QiDxoT6P\n25eQhy8F1N8OPHT9y9Lw0/LqyrOycpyyCh+yx1DRAoGAJ/6dlhyQnwSfMAe3mfRC\noiBQG6FkyoeXHHYcoQ/0cSzwp0BwBlar1Z28P7KTGcUNqV+YfK9nF47eoLaTLCmG\nG5du0Ds6m2Eg0sOBBqXHnw6R1PC878tgT/XokNxIsVlF5qRz88q7Rn0J1lzB7+Tl\n2HSAcyIUcmr0gxlhRmC2Jq4=\n-----END PRIVATE KEY-----\n",
@@ -205,7 +213,7 @@ mod tests {
         }"#;
 
         let client = types::client();
-        for key in [k1, k3] {
+        for key in [k1, k2, k3] {
             let cred_source: FlexibleCredentialSource =
                 serde_json::from_str(key).expect("Valid creds to parse");
 

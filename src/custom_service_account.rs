@@ -11,6 +11,9 @@ use crate::error::Error;
 use crate::types::{HyperClient, Signer, Token};
 use crate::util::HyperExt;
 
+// Comes from https://github.com/golang/oauth2/blob/a835fc4358f6852f50c4c5c33fddcd1adade5b0a/google/google.go#L25
+const DEFAULT_TOKEN_URI: &'static str = "https://oauth2.googleapis.com/token";
+
 /// A custom service account containing credentials
 ///
 /// Once initialized, a [`CustomServiceAccount`] can be converted into an [`AuthenticationManager`]
@@ -106,7 +109,7 @@ impl ServiceAccount for CustomServiceAccount {
 
         let mut retries = 0;
         let response = loop {
-            let request = hyper::Request::post(&self.credentials.token_uri)
+            let request = hyper::Request::post(self.credentials.token_uri())
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(hyper::Body::from(rqbody.clone()))
                 .unwrap();
@@ -150,11 +153,17 @@ pub(crate) struct ApplicationCredentials {
     /// auth_uri
     pub(crate) auth_uri: Option<String>,
     /// token_uri
-    pub(crate) token_uri: String,
+    pub(crate) token_uri: Option<String>,
     /// auth_provider_x509_cert_url
     pub(crate) auth_provider_x509_cert_url: Option<String>,
     /// client_x509_cert_url
     pub(crate) client_x509_cert_url: Option<String>,
+}
+
+impl ApplicationCredentials {
+    pub(crate) fn token_uri(&self) -> &str {
+        self.token_uri.as_deref().unwrap_or(DEFAULT_TOKEN_URI)
+    }
 }
 
 impl fmt::Debug for ApplicationCredentials {

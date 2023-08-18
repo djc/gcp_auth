@@ -41,7 +41,7 @@ impl<'a> Claims<'a> {
             .join(" ");
         Claims {
             iss: &key.client_email,
-            aud: &key.token_uri,
+            aud: &key.token_uri(),
             exp: expiry,
             iat,
             subject,
