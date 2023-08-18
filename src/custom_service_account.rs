@@ -54,7 +54,7 @@ impl CustomServiceAccount {
         }
     }
 
-    fn new(credentials: ApplicationCredentials) -> Result<Self, Error> {
+    pub(crate) fn new(credentials: ApplicationCredentials) -> Result<Self, Error> {
         Ok(Self {
             signer: Signer::new(&credentials.private_key)?,
             credentials,
@@ -137,7 +137,6 @@ impl ServiceAccount for CustomServiceAccount {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub(crate) struct ApplicationCredentials {
-    pub(crate) r#type: Option<String>,
     /// project_id
     pub(crate) project_id: Option<String>,
     /// private_key_id

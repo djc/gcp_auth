@@ -94,6 +94,7 @@ mod custom_service_account;
 mod default_authorized_user;
 mod default_service_account;
 mod error;
+mod flexible_credential_source;
 mod gcloud_authorized_user;
 mod jwt;
 mod types;
