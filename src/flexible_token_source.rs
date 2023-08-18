@@ -25,6 +25,7 @@ enum FlexibleCredentialSource {
     ImpersonatedServiceAccount(ImpersonatedServiceAccountCredentials),
 }
 
+// Refresh logic: https://github.com/golang/oauth2/blob/2e4a4e2bfb69ca7609cb423438c55caa131431c1/jwt/jwt.go#L101
 #[derive(Serialize, Debug)]
 struct ServiceAccountCredentials {
     audience: Option<String>,
@@ -120,16 +121,13 @@ impl ServiceAccountCredentials {
     }
 }
 
-// implementation to turn ServiceAccountCredentials into some kind of common config form.
-// Needs optional `scopes` and optional `subject` user to impersonate.
-// Replaces `token_url` with fallback.
-// Refresh logic: https://github.com/golang/oauth2/blob/2e4a4e2bfb69ca7609cb423438c55caa131431c1/jwt/jwt.go#L101
-
+// This credential parses the `~/.config/gcloud/application_default_credentials.json` file
+// Will use token_uri if present, otherwise will use `DEFAULT_TOKEN_GCP_URI`
+// Refresh logic is a bit nested, but it starts here https://github.com/golang/oauth2/blob/a835fc4358f6852f50c4c5c33fddcd1adade5b0a/token.go#L166
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct UserCredentials {
     client_id: String,
     client_secret: String,
-    auth_uri: Option<String>,
     token_uri: Option<String>,
     refresh_token: String,
     quota_project_id: Option<String>,
@@ -150,7 +148,7 @@ impl UserCredentials {
         Request::builder()
             .method(Method::POST)
             .uri(
-                self.auth_uri
+                self.token_uri
                     .as_deref()
                     .unwrap_or(Self::DEFAULT_TOKEN_GCP_URI),
             )
@@ -191,9 +189,12 @@ impl UserCredentials {
     }
 }
 
+// This credential uses the `source_credentials` to get a token
+// and then uses that token to get a token impersonating the service
+// account specified by `service_account_impersonation_url`.
+// refresh logic https://github.com/golang/oauth2/blob/a835fc4358f6852f50c4c5c33fddcd1adade5b0a/google/internal/externalaccount/impersonate.go#L57
 #[derive(Serialize, Deserialize, Debug)]
 struct ImpersonatedServiceAccountCredentials {
-    // Either an untagged enum or this
     service_account_impersonation_url: String,
     source_credentials: Box<FlexibleCredentialSource>,
     delegates: Vec<String>,
@@ -209,7 +210,7 @@ impl ImpersonatedServiceAccountCredentials {
         // Then we do a request to get the impersonated token
         let lifetime_seconds = DEFAULT_TOKEN_DURATION.whole_seconds();
         #[derive(Serialize, Clone)]
-        // https://github.com/golang/oauth2/blob/a835fc4358f6852f50c4c5c33fddcd1adade5b0a/google/internal/externalaccount/impersonate.go#L21
+        // Format from https://github.com/golang/oauth2/blob/a835fc4358f6852f50c4c5c33fddcd1adade5b0a/google/internal/externalaccount/impersonate.go#L21
         struct AccessTokenRequest {
             lifetime: String,
             #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -230,6 +231,8 @@ impl ImpersonatedServiceAccountCredentials {
 
         let mut retries = 0;
         let response = loop {
+            // We assume bearer tokens only. In the referenced code, other token types are possible
+            // https://github.com/golang/oauth2/blob/a835fc4358f6852f50c4c5c33fddcd1adade5b0a/token.go#L84
             let request = hyper::Request::post(token_uri)
                 .header(
                     header::AUTHORIZATION,
@@ -266,14 +269,42 @@ pub(crate) struct FlexibleCredentials {
     project_id: Option<String>,
 }
 
-impl From<FlexibleCredentialSource> for FlexibleCredentials {
-    fn from(creds: FlexibleCredentialSource) -> Self {
-        let pid = creds.project_id();
-        FlexibleCredentials {
-            tokens: RwLock::new(HashMap::new()),
-            credentials: creds,
-            project_id: pid,
+impl FlexibleCredentials {
+    const USER_CREDENTIALS_PATH: &'static str =
+        ".config/gcloud/application_default_credentials.json";
+
+    pub(crate) async fn from_env() -> Result<Option<Self>, Error> {
+        let creds_path = std::env::var_os("GOOGLE_APPLICATION_CREDENTIALS");
+        if let Some(path) = creds_path {
+            tracing::debug!("Reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var");
+            let creds = Self::from_file(PathBuf::from(path)).await?;
+            Ok(Some(creds))
+        } else {
+            Ok(None)
         }
+    }
+
+    /// Read service account credentials from the given JSON file
+    async fn from_file<T: AsRef<Path>>(path: T) -> Result<Self, Error> {
+        let creds_string = fs::read_to_string(&path)
+            .await
+            .map_err(Error::UserProfilePath)?;
+
+        Self::from_json(&creds_string)
+    }
+
+    fn from_json(json: &str) -> Result<Self, Error> {
+        match serde_json::from_str::<FlexibleCredentialSource>(json) {
+            Ok(credentials) => Ok(credentials.into()),
+            Err(e) => Err(Error::CustomServiceAccountCredentials(e)),
+        }
+    }
+
+    pub(crate) async fn from_default_credentials() -> Result<Self, Error> {
+        tracing::debug!("Loading user credentials file");
+        let mut home = dirs_next::home_dir().ok_or(Error::NoHomeDir)?;
+        home.push(Self::USER_CREDENTIALS_PATH);
+        Self::from_file(home).await
     }
 }
 
@@ -320,6 +351,17 @@ impl FlexibleCredentialSource {
     }
 }
 
+impl From<FlexibleCredentialSource> for FlexibleCredentials {
+    fn from(creds: FlexibleCredentialSource) -> Self {
+        let pid = creds.project_id();
+        FlexibleCredentials {
+            tokens: RwLock::new(HashMap::new()),
+            credentials: creds,
+            project_id: pid,
+        }
+    }
+}
+
 #[async_trait]
 impl ServiceAccount for FlexibleCredentials {
     async fn project_id(&self, _hc: &HyperClient) -> Result<String, Error> {
@@ -343,45 +385,6 @@ impl ServiceAccount for FlexibleCredentials {
         self.tokens.write().unwrap().insert(key, token.clone());
 
         Ok(token)
-    }
-}
-
-impl FlexibleCredentials {
-    const USER_CREDENTIALS_PATH: &'static str =
-        ".config/gcloud/application_default_credentials.json";
-
-    pub(crate) async fn from_env() -> Result<Option<Self>, Error> {
-        let creds_path = std::env::var_os("GOOGLE_APPLICATION_CREDENTIALS");
-        if let Some(path) = creds_path {
-            tracing::debug!("Reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var");
-            let creds = Self::from_file(PathBuf::from(path)).await?;
-            Ok(Some(creds))
-        } else {
-            Ok(None)
-        }
-    }
-
-    /// Read service account credentials from the given JSON file
-    async fn from_file<T: AsRef<Path>>(path: T) -> Result<Self, Error> {
-        let creds_string = fs::read_to_string(&path)
-            .await
-            .map_err(Error::UserProfilePath)?;
-
-        Self::from_json(&creds_string)
-    }
-
-    fn from_json(json: &str) -> Result<Self, Error> {
-        match serde_json::from_str::<FlexibleCredentialSource>(json) {
-            Ok(credentials) => Ok(credentials.into()),
-            Err(e) => Err(Error::CustomServiceAccountCredentials(e)),
-        }
-    }
-
-    pub(crate) async fn from_default_credentials() -> Result<Self, Error> {
-        tracing::debug!("Loading user credentials file");
-        let mut home = dirs_next::home_dir().ok_or(Error::NoHomeDir)?;
-        home.push(Self::USER_CREDENTIALS_PATH);
-        Self::from_file(home).await
     }
 }
 
