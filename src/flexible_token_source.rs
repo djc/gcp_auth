@@ -207,7 +207,7 @@ impl ImpersonatedServiceAccountCredentials {
         source_token: &Token,
     ) -> Result<Token, Error> {
         // Then we do a request to get the impersonated token
-        let lifetime_seconds = DEFAULT_TOKEN_DURATION.whole_seconds().to_string();
+        let lifetime_seconds = DEFAULT_TOKEN_DURATION.whole_seconds();
         #[derive(Serialize, Clone)]
         // https://github.com/golang/oauth2/blob/a835fc4358f6852f50c4c5c33fddcd1adade5b0a/google/internal/externalaccount/impersonate.go#L21
         struct AccessTokenRequest {
@@ -219,7 +219,7 @@ impl ImpersonatedServiceAccountCredentials {
         }
 
         let request = AccessTokenRequest {
-            lifetime: lifetime_seconds,
+            lifetime: format!("{lifetime_seconds}s"),
             scope: scopes.iter().map(|s| s.to_string()).collect(),
             delegates: self.delegates.clone(),
         };
