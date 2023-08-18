@@ -41,7 +41,7 @@ impl<'a> Claims<'a> {
             .join(" ");
         Claims {
             iss: &key.client_email,
-            aud: &key.audience(),
+            aud: key.audience(),
             exp: expiry,
             iat,
             subject,

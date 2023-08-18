@@ -12,7 +12,7 @@ use crate::types::{HyperClient, Signer, Token};
 use crate::util::HyperExt;
 
 // Comes from https://github.com/golang/oauth2/blob/a835fc4358f6852f50c4c5c33fddcd1adade5b0a/google/google.go#L25
-const DEFAULT_TOKEN_URI: &'static str = "https://oauth2.googleapis.com/token";
+const DEFAULT_TOKEN_URI: &str = "https://oauth2.googleapis.com/token";
 
 /// A custom service account containing credentials
 ///
