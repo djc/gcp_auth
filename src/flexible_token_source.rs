@@ -15,7 +15,7 @@ use crate::{
 };
 
 // Implementation referenced from
-// https://github.com/golang/oauth2/blob/master/google/google.go#L158
+// https://github.com/golang/oauth2/blob/a835fc4358f6852f50c4c5c33fddcd1adade5b0a/google/google.go#L158
 // Currently not implementing external account credentials
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type", rename_all = "snake_case")]
