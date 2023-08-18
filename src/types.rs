@@ -39,15 +39,6 @@ impl Token {
             }),
         }
     }
-
-    pub(crate) fn from_string(access_token: String, expires_in: Duration) -> Self {
-        Token {
-            inner: Arc::new(InnerToken {
-                access_token,
-                expires_at: OffsetDateTime::now_utc() + expires_in,
-            }),
-        }
-    }
 }
 
 impl fmt::Debug for Token {

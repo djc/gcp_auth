@@ -91,7 +91,8 @@ impl ServiceAccount for CustomServiceAccount {
     }
 
     fn get_token(&self, scopes: &[&str]) -> Option<Token> {
-        let key: Vec<_> = scopes.iter().map(|x| x.to_string()).collect();
+        let mut key: Vec<_> = scopes.iter().map(|x| x.to_string()).collect();
+        key.sort();
         self.tokens.read().unwrap().get(&key).cloned()
     }
 
