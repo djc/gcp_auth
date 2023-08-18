@@ -36,8 +36,9 @@ struct ServiceAccountCredentials {
     token_uri: Option<String>,
     quota_project_id: Option<String>,
     project_id: Option<String>,
+    // Boxing to avoid clippy's `large_enum_variant` lint
     #[serde(skip_serializing)]
-    signer: Signer,
+    signer: Box<Signer>,
 }
 
 impl<'de> Deserialize<'de> for ServiceAccountCredentials {
@@ -72,7 +73,7 @@ impl<'de> Deserialize<'de> for ServiceAccountCredentials {
             quota_project_id: deserialized.quota_project_id,
             auth_uri: deserialized.auth_uri,
             project_id: deserialized.project_id,
-            signer,
+            signer: Box::new(signer),
         })
     }
 }
@@ -89,7 +90,7 @@ impl ServiceAccountCredentials {
         // https://github.com/golang/oauth2/blob/a835fc4358f6852f50c4c5c33fddcd1adade5b0a/jwt/jwt.go#L68
         let audience = self.audience.as_deref().unwrap_or(token_uri);
 
-        let jwt = Claims::new(&self.client_email, &audience, scopes, None).to_jwt(&self.signer)?;
+        let jwt = Claims::new(&self.client_email, audience, scopes, None).to_jwt(&self.signer)?;
         let rqbody = form_urlencoded::Serializer::new(String::new())
             .extend_pairs(&[("grant_type", GRANT_TYPE), ("assertion", jwt.as_str())])
             .finish();
@@ -117,7 +118,7 @@ impl ServiceAccountCredentials {
             }
         };
 
-        Ok(response.deserialize::<Token>().await?)
+        response.deserialize().await
     }
 }
 
@@ -185,7 +186,7 @@ impl UserCredentials {
             }
         };
 
-        Ok(response.deserialize().await.map_err(Into::<Error>::into)?)
+        response.deserialize().await.map_err(Into::<Error>::into)
     }
 }
 
@@ -258,7 +259,7 @@ impl ImpersonatedServiceAccountCredentials {
             }
         };
 
-        Ok(response.deserialize::<Token>().await?)
+        response.deserialize().await
     }
 }
 

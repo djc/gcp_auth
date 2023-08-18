@@ -40,8 +40,8 @@ impl<'a> Claims<'a> {
             .collect::<Vec<_>>()
             .join(" ");
         Claims {
-            iss: &iss,
-            aud: &audience,
+            iss,
+            aud: audience,
             exp: expiry,
             iat,
             subject,

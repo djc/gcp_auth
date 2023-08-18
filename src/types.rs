@@ -160,11 +160,10 @@ where
 
     match time_options {
         SecondsOrTime::Seconds(seconds_from_now) => {
-            return Ok(OffsetDateTime::now_utc() + Duration::seconds(seconds_from_now));
+            Ok(OffsetDateTime::now_utc() + Duration::seconds(seconds_from_now))
         }
         SecondsOrTime::Time(time) => {
-            return Ok(OffsetDateTime::parse(time.as_str(), &Iso8601::PARSING)
-                .map_err(de::Error::custom)?);
+            OffsetDateTime::parse(time.as_str(), &Iso8601::PARSING).map_err(de::Error::custom)
         }
     }
 }
