@@ -184,7 +184,9 @@ impl CredentialSource {
 
     pub(crate) async fn from_env() -> Result<Option<Self>, Error> {
         let creds_path = std::env::var_os("GOOGLE_APPLICATION_CREDENTIALS");
-        let Some(path) = creds_path else { return Ok(None); };
+        let Some(path) = creds_path else {
+            return Ok(None);
+        };
         tracing::debug!("Reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var");
         let file = std::fs::File::open(path).map_err(Error::CustomServiceAccountPath)?;
 
