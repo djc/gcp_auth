@@ -1,4 +1,3 @@
-use std::fs;
 use std::sync::RwLock;
 
 use async_trait::async_trait;
@@ -19,18 +18,11 @@ pub(crate) struct ConfigDefaultCredentials {
 
 impl ConfigDefaultCredentials {
     const DEFAULT_TOKEN_GCP_URI: &'static str = "https://accounts.google.com/o/oauth2/token";
-    const USER_CREDENTIALS_PATH: &'static str =
-        ".config/gcloud/application_default_credentials.json";
 
-    pub(crate) async fn new(client: &HyperClient) -> Result<Self, Error> {
-        tracing::debug!("Loading user credentials file");
-        let mut home = dirs_next::home_dir().ok_or(Error::NoHomeDir)?;
-        home.push(Self::USER_CREDENTIALS_PATH);
-
-        let file = fs::File::open(home).map_err(Error::UserProfilePath)?;
-        let credentials = serde_json::from_reader::<_, UserCredentials>(file)
-            .map_err(Error::UserProfileFormat)?;
-
+    pub(crate) async fn from_user_credentials(
+        credentials: UserCredentials,
+        client: &HyperClient,
+    ) -> Result<Self, Error> {
         Ok(Self {
             token: RwLock::new(Self::get_token(&credentials, client).await?),
             credentials,
@@ -105,7 +97,7 @@ struct RefreshRequest<'a> {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct UserCredentials {
+pub(crate) struct UserCredentials {
     /// Client id
     pub(crate) client_id: String,
     /// Client secret
@@ -114,8 +106,6 @@ struct UserCredentials {
     pub(crate) quota_project_id: Option<String>,
     /// Refresh Token
     pub(crate) refresh_token: String,
-    /// Type
-    pub(crate) r#type: String,
 }
 
 /// How many times to attempt to fetch a token from the GCP token endpoint.

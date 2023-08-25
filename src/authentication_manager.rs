@@ -6,7 +6,7 @@ use crate::default_authorized_user::ConfigDefaultCredentials;
 use crate::default_service_account::MetadataServiceAccount;
 use crate::error::Error;
 use crate::gcloud_authorized_user::GCloudAuthorizedUser;
-use crate::types::{self, HyperClient, Token};
+use crate::types::{self, CredentialSource, HyperClient, Token};
 
 #[async_trait]
 pub(crate) trait ServiceAccount: Send + Sync {
@@ -43,15 +43,55 @@ impl AuthenticationManager {
     #[tracing::instrument]
     pub async fn new() -> Result<Self, Error> {
         tracing::debug!("Initializing gcp_auth");
-        if let Some(service_account) = CustomServiceAccount::from_env()? {
-            return Ok(service_account.into());
+        let client = types::client();
+        if let Some(service_account_creds) = CredentialSource::from_env().await? {
+            tracing::debug!("Using GOOGLE_APPLICATION_CREDENTIALS env");
+
+            let service_account: Box<dyn ServiceAccount> = match service_account_creds {
+                CredentialSource::ServiceAccount(creds) => {
+                    let service_account = CustomServiceAccount::new(creds)?;
+                    Box::new(service_account)
+                }
+                CredentialSource::AuthorizedUser(creds) => {
+                    let service_account =
+                        ConfigDefaultCredentials::from_user_credentials(creds, &client).await?;
+                    Box::new(service_account)
+                }
+            };
+
+            return Ok(Self {
+                service_account,
+                client,
+                refresh_mutex: Mutex::new(()),
+            });
         }
 
-        let client = types::client();
-        let default_user_error = match ConfigDefaultCredentials::new(&client).await {
-            Ok(service_account) => {
+        let default_user_error = match CredentialSource::from_default_credentials().await {
+            Ok(service_account_creds) => {
                 tracing::debug!("Using ConfigDefaultCredentials");
-                return Ok(Self::build(client, service_account));
+
+                let service_account: Result<Box<dyn ServiceAccount>, Error> =
+                    match service_account_creds {
+                        CredentialSource::AuthorizedUser(creds) => {
+                            ConfigDefaultCredentials::from_user_credentials(creds, &client)
+                                .await
+                                .map(|creds| Box::new(creds) as _)
+                        }
+                        CredentialSource::ServiceAccount(creds) => {
+                            CustomServiceAccount::new(creds).map(|creds| Box::new(creds) as _)
+                        }
+                    };
+
+                match service_account {
+                    Ok(service_account) => {
+                        return Ok(Self {
+                            service_account,
+                            client,
+                            refresh_mutex: Mutex::new(()),
+                        });
+                    }
+                    Err(e) => e,
+                }
             }
             Err(e) => e,
         };
