@@ -30,6 +30,10 @@ jobs:
         with:
           command: check
           args: --all-features --all-targets
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features --all-targets
 
   lint:
     runs-on: ubuntu-latest
