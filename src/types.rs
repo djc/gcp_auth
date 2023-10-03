@@ -125,7 +125,7 @@ impl Signer {
 
     /// Sign the input message and return the signature
     pub fn sign(&self, input: &[u8]) -> Result<Vec<u8>, Error> {
-        let mut signature = vec![0; self.key.public_modulus_len()];
+        let mut signature = vec![0; self.key.public().modulus_len()];
         self.key
             .sign(&RSA_PKCS1_SHA256, &self.rng, input, &mut signature)
             .map_err(|_| Error::SignerFailed)?;
