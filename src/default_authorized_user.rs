@@ -24,7 +24,7 @@ impl ConfigDefaultCredentials {
 
     pub(crate) async fn new(client: &HyperClient) -> Result<Self, Error> {
         tracing::debug!("Loading user credentials file");
-        let mut home = dirs_next::home_dir().ok_or(Error::NoHomeDir)?;
+        let mut home = home::home_dir().ok_or(Error::NoHomeDir)?;
         home.push(Self::USER_CREDENTIALS_PATH);
 
         let file = fs::File::open(home).map_err(Error::UserProfilePath)?;
