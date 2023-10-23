@@ -1,9 +1,9 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::RwLock;
+use std::time::Duration;
 
 use async_trait::async_trait;
-use time::Duration;
 use which::which;
 
 use crate::authentication_manager::ServiceAccount;
@@ -15,7 +15,7 @@ use crate::Token;
 /// The default number of seconds that it takes for a Google Cloud auth token to expire.
 /// This appears to be the default from practical testing, but we have not found evidence
 /// that this will always be the default duration.
-pub(crate) const DEFAULT_TOKEN_DURATION: Duration = Duration::seconds(3600);
+pub(crate) const DEFAULT_TOKEN_DURATION: Duration = Duration::from_secs(3600);
 
 #[derive(Debug)]
 pub(crate) struct GCloudAuthorizedUser {
@@ -79,7 +79,8 @@ fn run(gcloud: &Path, cmd: &[&str]) -> Result<String, Error> {
 
 #[cfg(test)]
 mod tests {
-    use time::{Duration, OffsetDateTime};
+    use chrono::Utc;
+    use std::time::Duration;
 
     use super::*;
 
@@ -89,11 +90,11 @@ mod tests {
         let gcloud = GCloudAuthorizedUser::new().await.unwrap();
         println!("{:?}", gcloud.project_id);
         if let Some(t) = gcloud.get_token(&[""]) {
-            let expires = OffsetDateTime::now_utc() + DEFAULT_TOKEN_DURATION;
+            let expires = Utc::now() + DEFAULT_TOKEN_DURATION;
             println!("{:?}", t);
             assert!(!t.has_expired());
-            assert!(t.expires_at() < expires + Duration::seconds(1));
-            assert!(t.expires_at() > expires - Duration::seconds(1));
+            assert!(t.expires_at() < expires + Duration::from_secs(1));
+            assert!(t.expires_at() > expires - Duration::from_secs(1));
         } else {
             panic!("GCloud Authorized User failed to get a token");
         }
@@ -106,12 +107,12 @@ mod tests {
     fn test_token_from_string() {
         let s = String::from("abc123");
         let token = Token::from_string(s, DEFAULT_TOKEN_DURATION);
-        let expires = OffsetDateTime::now_utc() + DEFAULT_TOKEN_DURATION;
+        let expires = Utc::now() + DEFAULT_TOKEN_DURATION;
 
         assert_eq!(token.as_str(), "abc123");
         assert!(!token.has_expired());
-        assert!(token.expires_at() < expires + Duration::seconds(1));
-        assert!(token.expires_at() > expires - Duration::seconds(1));
+        assert!(token.expires_at() < expires + Duration::from_secs(1));
+        assert!(token.expires_at() > expires - Duration::from_secs(1));
     }
 
     #[test]
