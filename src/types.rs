@@ -7,8 +7,7 @@ use ring::{
     rand::SystemRandom,
     signature::{RsaKeyPair, RSA_PKCS1_SHA256},
 };
-use serde::Deserializer;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer};
 use time::{Duration, OffsetDateTime};
 
 use crate::Error;
@@ -24,7 +23,7 @@ use crate::Error;
 /// [`AuthenticationManager`]: crate::AuthenticationManager
 /// [`Display`]: fmt::Display
 /// [`Debug`]: fmt::Debug
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+#[derive(Clone, PartialEq, Eq, Deserialize)]
 pub struct Token {
     #[serde(flatten)]
     inner: Arc<InnerToken>,
@@ -50,7 +49,7 @@ impl fmt::Debug for Token {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+#[derive(Clone, PartialEq, Eq, Deserialize)]
 struct InnerToken {
     access_token: String,
     #[serde(
@@ -162,22 +161,6 @@ pub(crate) type HyperClient =
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_serialise() {
-        let token = Token {
-            inner: Arc::new(InnerToken {
-                access_token: "abc123".to_string(),
-                expires_at: OffsetDateTime::from_unix_timestamp(123).unwrap(),
-            }),
-        };
-        let s = serde_json::to_string(&token).unwrap();
-
-        assert_eq!(
-            s,
-            r#"{"access_token":"abc123","expires_at":[1970,1,0,2,3,0,0,0,0]}"#
-        );
-    }
 
     #[test]
     fn test_deserialise_with_time() {
