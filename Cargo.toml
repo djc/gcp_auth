@@ -1,7 +1,7 @@
 [package]
 name = "gcp_auth"
 version = "0.9.0"
-edition = "2018"
+edition = "2021"
 repository = "https://github.com/hrvolapeter/gcp_auth"
 description = "Google cloud platform (GCP) authentication using default and custom service accounts"
 documentation = "https://docs.rs/gcp_auth/"
