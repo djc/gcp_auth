@@ -26,6 +26,15 @@ jobs:
           toolchain: ${{ matrix.rust }}
       - run: cargo test --all-features --all-targets
 
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.65.0"
+      - run: cargo check --lib --all-features
+
   lint:
     runs-on: ubuntu-latest
     steps:
