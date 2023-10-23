@@ -163,7 +163,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_deserialise_with_time() {
+    fn test_deserialize_with_time() {
         let s = r#"{"access_token":"abc123","expires_in":100}"#;
         let token: Token = serde_json::from_str(s).unwrap();
         let expires = OffsetDateTime::now_utc() + Duration::seconds(100);

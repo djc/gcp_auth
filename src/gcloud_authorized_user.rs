@@ -115,7 +115,7 @@ mod tests {
     }
 
     #[test]
-    fn test_deserialise_no_time() {
+    fn test_deserialize_no_time() {
         let s = r#"{"access_token":"abc123"}"#;
         let result = serde_json::from_str::<Token>(s)
             .expect_err("Deserialization from JSON should fail when no expiry_time is included");
