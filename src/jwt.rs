@@ -1,6 +1,7 @@
 //! Copyright (c) 2016 Google Inc (lewinb@google.com).
 
 use base64::{engine::general_purpose::URL_SAFE, Engine};
+use chrono::Utc;
 use serde::Serialize;
 
 use crate::custom_service_account::ApplicationCredentials;
@@ -31,7 +32,7 @@ impl<'a> Claims<'a> {
     where
         T: std::string::ToString,
     {
-        let iat = time::OffsetDateTime::now_utc().unix_timestamp();
+        let iat = Utc::now().timestamp();
         let expiry = iat + 3600 - 5; // Max validity is 1h.
 
         let scope: String = scopes

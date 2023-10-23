@@ -1,6 +1,8 @@
 use std::sync::Arc;
+use std::time::Duration;
 use std::{fmt, io};
 
+use chrono::{DateTime, Utc};
 use hyper::Client;
 use hyper_rustls::HttpsConnectorBuilder;
 use ring::{
@@ -8,7 +10,6 @@ use ring::{
     signature::{RsaKeyPair, RSA_PKCS1_SHA256},
 };
 use serde::{Deserialize, Deserializer};
-use time::{Duration, OffsetDateTime};
 
 use crate::Error;
 /// Represents an access token. All access tokens are Bearer tokens.
@@ -34,7 +35,7 @@ impl Token {
         Token {
             inner: Arc::new(InnerToken {
                 access_token,
-                expires_at: OffsetDateTime::now_utc() + expires_in,
+                expires_at: Utc::now() + expires_in,
             }),
         }
     }
@@ -56,7 +57,7 @@ struct InnerToken {
         deserialize_with = "deserialize_time",
         rename(deserialize = "expires_in")
     )]
-    expires_at: OffsetDateTime,
+    expires_at: DateTime<Utc>,
 }
 
 impl Token {
@@ -71,7 +72,7 @@ impl Token {
     /// The docs state, the metadata server caches tokens until 5 minutes before expiry.
     /// We use 20s to be on the safe side.
     pub fn has_expired(&self) -> bool {
-        self.inner.expires_at - Duration::seconds(20) <= OffsetDateTime::now_utc()
+        self.inner.expires_at - Duration::from_secs(20) <= Utc::now()
     }
 
     /// Get str representation of the token.
@@ -80,7 +81,7 @@ impl Token {
     }
 
     /// Get expiry of token, if available
-    pub fn expires_at(&self) -> OffsetDateTime {
+    pub fn expires_at(&self) -> DateTime<Utc> {
         self.inner.expires_at
     }
 }
@@ -138,12 +139,12 @@ impl fmt::Debug for Signer {
     }
 }
 
-fn deserialize_time<'de, D>(deserializer: D) -> Result<OffsetDateTime, D::Error>
+fn deserialize_time<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let seconds_from_now: i64 = Deserialize::deserialize(deserializer)?;
-    Ok(OffsetDateTime::now_utc() + Duration::seconds(seconds_from_now))
+    let seconds_from_now: u64 = Deserialize::deserialize(deserializer)?;
+    Ok(Utc::now() + Duration::from_secs(seconds_from_now))
 }
 
 pub(crate) fn client() -> HyperClient {
@@ -166,13 +167,13 @@ mod tests {
     fn test_deserialize_with_time() {
         let s = r#"{"access_token":"abc123","expires_in":100}"#;
         let token: Token = serde_json::from_str(s).unwrap();
-        let expires = OffsetDateTime::now_utc() + Duration::seconds(100);
+        let expires = Utc::now() + Duration::from_secs(100);
 
         assert_eq!(token.as_str(), "abc123");
 
         // Testing time is always racy, give it 1s leeway.
         let expires_at = token.expires_at();
-        assert!(expires_at < expires + Duration::seconds(1));
-        assert!(expires_at > expires - Duration::seconds(1));
+        assert!(expires_at < expires + Duration::from_secs(1));
+        assert!(expires_at > expires - Duration::from_secs(1));
     }
 }
