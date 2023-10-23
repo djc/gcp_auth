@@ -50,6 +50,9 @@ impl fmt::Debug for Token {
     }
 }
 
+/// Token data as returned by the server
+///
+/// https://cloud.google.com/iam/docs/reference/sts/rest/v1/TopLevel/token#response-body
 #[derive(Clone, PartialEq, Eq, Deserialize)]
 struct InnerToken {
     access_token: String,
