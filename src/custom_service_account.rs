@@ -93,13 +93,13 @@ impl ServiceAccount for CustomServiceAccount {
     }
 
     #[tracing::instrument]
-    async fn refresh_token(&self, client: &HyperClient, scopes: &[&str]) -> Result<Token, Error> {
+    async fn refresh_token(&self, client: &HyperClient, scopes: &[&str], subject: Option<&str>) -> Result<Token, Error> {
         use crate::jwt::Claims;
         use crate::jwt::GRANT_TYPE;
         use hyper::header;
         use url::form_urlencoded;
 
-        let jwt = Claims::new(&self.credentials, scopes, None).to_jwt(&self.signer)?;
+        let jwt = Claims::new(&self.credentials, scopes, subject).to_jwt(&self.signer)?;
         let rqbody = form_urlencoded::Serializer::new(String::new())
             .extend_pairs(&[("grant_type", GRANT_TYPE), ("assertion", jwt.as_str())])
             .finish();
