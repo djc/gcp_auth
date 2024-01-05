@@ -12,7 +12,7 @@ use crate::types::{self, HyperClient, Token};
 pub(crate) trait ServiceAccount: Send + Sync {
     async fn project_id(&self, client: &HyperClient) -> Result<String, Error>;
     fn get_token(&self, scopes: &[&str]) -> Option<Token>;
-    async fn refresh_token(&self, client: &HyperClient, scopes: &[&str],subject: Option<&str>) -> Result<Token, Error>;
+    async fn refresh_token(&self, client: &HyperClient, scopes: &[&str], subject: Option<&str>) -> Result<Token, Error>;
 }
 
 /// Authentication manager is responsible for caching and obtaining credentials for the required
@@ -98,7 +98,7 @@ impl AuthenticationManager {
     ///
     /// Token can be used in the request authorization header in format "Bearer {token}",
     /// subject is used to impersonate a user, if None, the service account is used
-    pub async fn get_token_with_subject(&self, scopes: &[&str],subject: Option<&str>) -> Result<Token, Error> {
+    pub async fn get_token_with_subject(&self, scopes: &[&str], subject: Option<&str>) -> Result<Token, Error> {
         let token = self.service_account.get_token(scopes);
         if let Some(token) = token.filter(|token| !token.has_expired()) {
             return Ok(token);
@@ -113,7 +113,7 @@ impl AuthenticationManager {
         }
 
         self.service_account
-            .refresh_token(&self.client, scopes,subject)
+            .refresh_token(&self.client, scopes, subject)
             .await
     }
 
