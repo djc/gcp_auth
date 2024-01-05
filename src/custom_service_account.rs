@@ -93,7 +93,12 @@ impl ServiceAccount for CustomServiceAccount {
     }
 
     #[tracing::instrument]
-    async fn refresh_token(&self, client: &HyperClient, scopes: &[&str], subject: Option<&str>) -> Result<Token, Error> {
+    async fn refresh_token(
+        &self,
+        client: &HyperClient,
+        scopes: &[&str],
+        subject: Option<&str>,
+    ) -> Result<Token, Error> {
         use crate::jwt::Claims;
         use crate::jwt::GRANT_TYPE;
         use hyper::header;

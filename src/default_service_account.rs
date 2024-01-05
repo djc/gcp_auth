@@ -81,7 +81,12 @@ impl ServiceAccount for MetadataServiceAccount {
         Some(self.token.read().unwrap().clone())
     }
 
-    async fn refresh_token(&self, client: &HyperClient, _scopes: &[&str],_subect: Option<&str>) -> Result<Token, Error> {
+    async fn refresh_token(
+        &self,
+        client: &HyperClient,
+        _scopes: &[&str],
+        _subect: Option<&str>,
+    ) -> Result<Token, Error> {
         let token = Self::get_token(client).await?;
         *self.token.write().unwrap() = token.clone();
         Ok(token)
