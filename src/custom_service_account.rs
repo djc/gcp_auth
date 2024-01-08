@@ -6,7 +6,7 @@ use std::sync::RwLock;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
-use crate::authentication_manager::ServiceAccount;
+use crate::authentication_manager::{ServiceAccount, TokenStyle};
 use crate::error::Error;
 use crate::types::{HyperClient, Signer, Token};
 use crate::util::HyperExt;
@@ -80,6 +80,10 @@ impl CustomServiceAccount {
 
 #[async_trait]
 impl ServiceAccount for CustomServiceAccount {
+    fn get_style(&self) -> TokenStyle {
+        TokenStyle::AccountAndScopes
+    }
+
     async fn project_id(&self, _: &HyperClient) -> Result<String, Error> {
         match &self.credentials.project_id {
             Some(pid) => Ok(pid.clone()),

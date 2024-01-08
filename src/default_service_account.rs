@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use hyper::body::Body;
 use hyper::{Method, Request};
 
-use crate::authentication_manager::ServiceAccount;
+use crate::authentication_manager::{ServiceAccount, TokenStyle};
 use crate::error::Error;
 use crate::types::{HyperClient, Token};
 use crate::util::HyperExt;
@@ -62,6 +62,10 @@ impl MetadataServiceAccount {
 
 #[async_trait]
 impl ServiceAccount for MetadataServiceAccount {
+    fn get_style(&self) -> TokenStyle {
+        TokenStyle::Account
+    }
+
     async fn project_id(&self, client: &HyperClient) -> Result<String, Error> {
         tracing::debug!("Getting project ID from GCP instance metadata server");
         let req = Self::build_token_request(Self::DEFAULT_PROJECT_ID_GCP_URI);
