@@ -44,10 +44,10 @@ impl AuthenticationManager {
     pub async fn new() -> Result<Self, Error> {
         tracing::debug!("Initializing gcp_auth");
         if let Some(service_account) = CustomServiceAccount::from_env()? {
-            return Ok(service_account.into());
+            return service_account.try_into();
         }
 
-        let client = types::client();
+        let client = types::client()?;
         let default_user_error = match ConfigDefaultCredentials::new(&client).await {
             Ok(service_account) => {
                 tracing::debug!("Using ConfigDefaultCredentials");
@@ -117,8 +117,10 @@ impl AuthenticationManager {
     }
 }
 
-impl From<CustomServiceAccount> for AuthenticationManager {
-    fn from(service_account: CustomServiceAccount) -> Self {
-        Self::build(types::client(), service_account)
+impl TryFrom<CustomServiceAccount> for AuthenticationManager {
+    type Error = Error;
+
+    fn try_from(service_account: CustomServiceAccount) -> Result<Self, Self::Error> {
+        Ok(Self::build(types::client()?, service_account))
     }
 }
