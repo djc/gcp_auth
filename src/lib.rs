@@ -55,7 +55,7 @@
 //! // `credentials_path` variable is the path for the credentials `.json` file.
 //! let credentials_path = PathBuf::from("service-account.json");
 //! let service_account = CustomServiceAccount::from_file(credentials_path)?;
-//! let authentication_manager = AuthenticationManager::from(service_account);
+//! let authentication_manager = AuthenticationManager::try_from(service_account)?;
 //! let scopes = &["https://www.googleapis.com/auth/cloud-platform"];
 //! let token = authentication_manager.get_token(scopes).await?;
 //! # Ok(())

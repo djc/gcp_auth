@@ -97,17 +97,12 @@ pub struct Signer {
 
 impl Signer {
     pub(crate) fn new(pem_pkcs8: &str) -> Result<Self, Error> {
-        let private_keys = rustls_pemfile::pkcs8_private_keys(&mut pem_pkcs8.as_bytes());
-
-        let key = match private_keys {
-            Ok(mut keys) if !keys.is_empty() => {
-                keys.truncate(1);
-                keys.remove(0)
-            }
-            Ok(_) => {
+        let key = match rustls_pemfile::private_key(&mut pem_pkcs8.as_bytes()) {
+            Ok(Some(key)) => key,
+            Ok(None) => {
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidInput,
-                    "Not enough private keys in PEM",
+                    "No private key found in PEM",
                 )
                 .into())
             }
@@ -121,7 +116,7 @@ impl Signer {
         };
 
         Ok(Signer {
-            key: RsaKeyPair::from_pkcs8(&key).map_err(|_| Error::SignerInit)?,
+            key: RsaKeyPair::from_pkcs8(key.secret_der()).map_err(|_| Error::SignerInit)?,
             rng: SystemRandom::new(),
         })
     }
@@ -150,13 +145,13 @@ where
     Ok(Utc::now() + Duration::from_secs(seconds_from_now))
 }
 
-pub(crate) fn client() -> HyperClient {
+pub(crate) fn client() -> Result<HyperClient, Error> {
     #[cfg(feature = "webpki-roots")]
     let https = HttpsConnectorBuilder::new().with_webpki_roots();
     #[cfg(not(feature = "webpki-roots"))]
-    let https = HttpsConnectorBuilder::new().with_native_roots();
+    let https = HttpsConnectorBuilder::new().with_native_roots()?;
 
-    Client::builder().build::<_, hyper::Body>(https.https_or_http().enable_http2().build())
+    Ok(Client::builder().build::<_, hyper::Body>(https.https_or_http().enable_http2().build()))
 }
 
 pub(crate) type HyperClient =
