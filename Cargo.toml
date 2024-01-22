@@ -32,7 +32,7 @@ tokio = { version = "1.1", features = ["fs", "sync"] }
 tracing = "0.1.29"
 tracing-futures = "0.2.5"
 url = "2"
-which = "5.0"
+which = "6.0"
 
 [dev-dependencies]
 env_logger = "0.10"
