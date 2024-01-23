@@ -19,7 +19,7 @@ pub(crate) struct Claims<'a> {
     aud: &'a str,
     exp: i64,
     iat: i64,
-    subject: Option<&'a str>,
+    sub: Option<&'a str>,
     scope: String,
 }
 
@@ -45,7 +45,7 @@ impl<'a> Claims<'a> {
             aud: &key.token_uri,
             exp: expiry,
             iat,
-            subject,
+            sub: subject,
             scope,
         }
     }
