@@ -6,7 +6,7 @@ use std::time::Duration;
 use async_trait::async_trait;
 use which::which;
 
-use crate::authentication_manager::ServiceAccount;
+use crate::authentication_manager::{ServiceAccount, TokenStyle};
 use crate::error::Error;
 use crate::error::Error::{GCloudError, GCloudNotFound, GCloudParseError};
 use crate::types::HyperClient;
@@ -46,6 +46,10 @@ impl GCloudAuthorizedUser {
 
 #[async_trait]
 impl ServiceAccount for GCloudAuthorizedUser {
+    fn get_style(&self) -> TokenStyle {
+        TokenStyle::Account
+    }
+
     async fn project_id(&self, _: &HyperClient) -> Result<String, Error> {
         self.project_id.clone().ok_or(Error::NoProjectId)
     }
