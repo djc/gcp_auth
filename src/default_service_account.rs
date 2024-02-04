@@ -4,6 +4,7 @@ use std::sync::RwLock;
 use async_trait::async_trait;
 use hyper::body::Body;
 use hyper::{Method, Request};
+use tracing::{instrument, Level};
 
 use crate::authentication_manager::ServiceAccount;
 use crate::error::Error;
@@ -34,7 +35,7 @@ impl MetadataServiceAccount {
             .unwrap()
     }
 
-    #[tracing::instrument]
+    #[instrument(level = Level::DEBUG)]
     async fn get_token(client: &HyperClient) -> Result<Token, Error> {
         let mut retries = 0;
         tracing::debug!("Getting token from GCP instance metadata server");

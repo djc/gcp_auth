@@ -5,6 +5,7 @@ use async_trait::async_trait;
 use hyper::body::Body;
 use hyper::{Method, Request};
 use serde::{Deserialize, Serialize};
+use tracing::{instrument, Level};
 
 use crate::authentication_manager::ServiceAccount;
 use crate::error::Error;
@@ -46,7 +47,7 @@ impl ConfigDefaultCredentials {
             .unwrap()
     }
 
-    #[tracing::instrument]
+    #[instrument(level = Level::DEBUG)]
     async fn get_token(cred: &UserCredentials, client: &HyperClient) -> Result<Token, Error> {
         let mut retries = 0;
         let response = loop {

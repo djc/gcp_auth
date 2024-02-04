@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use tokio::sync::Mutex;
+use tracing::{instrument, Level};
 
 use crate::custom_service_account::CustomServiceAccount;
 use crate::default_authorized_user::ConfigDefaultCredentials;
@@ -40,7 +41,7 @@ impl AuthenticationManager {
     ///    if it succeeds, use the default service account as the token source.
     /// 4. Check if the `gcloud` tool is available on the `PATH`; if so, use the
     ///    `gcloud auth print-access-token` command as the token source.
-    #[tracing::instrument]
+    #[instrument(level = Level::DEBUG)]
     pub async fn new() -> Result<Self, Error> {
         tracing::debug!("Initializing gcp_auth");
         if let Some(service_account) = CustomServiceAccount::from_env()? {
