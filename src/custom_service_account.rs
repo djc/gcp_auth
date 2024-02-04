@@ -5,6 +5,7 @@ use std::sync::RwLock;
 
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
+use tracing::{instrument, Level};
 
 use crate::authentication_manager::ServiceAccount;
 use crate::error::Error;
@@ -92,7 +93,7 @@ impl ServiceAccount for CustomServiceAccount {
         self.tokens.read().unwrap().get(&key).cloned()
     }
 
-    #[tracing::instrument]
+    #[instrument(level = Level::DEBUG)]
     async fn refresh_token(&self, client: &HyperClient, scopes: &[&str]) -> Result<Token, Error> {
         use crate::jwt::Claims;
         use crate::jwt::GRANT_TYPE;
