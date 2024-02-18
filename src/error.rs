@@ -34,7 +34,7 @@ pub enum Error {
     ///
     /// By default, the custom service account credentials are parsed from the path pointed to by the
     /// `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
-    #[error("Application profile provided in `GOOGLE_APPLICATION_CREDENTIALS` was not parsable")]
+    #[error("Unable to parse custom service account credentials")]
     CustomServiceAccountCredentials(#[source] serde_json::error::Error),
 
     /// Default user profile not found
