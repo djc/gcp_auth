@@ -80,7 +80,6 @@ fn run(gcloud: &Path, cmd: &[&str]) -> Result<String, Error> {
 #[cfg(test)]
 mod tests {
     use chrono::Utc;
-    use std::time::Duration;
 
     use super::*;
 
