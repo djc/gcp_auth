@@ -24,22 +24,23 @@ pub(crate) struct Claims<'a> {
 }
 
 impl<'a> Claims<'a> {
-    pub(crate) fn new<T>(
+    pub(crate) fn new(
         key: &'a ApplicationCredentials,
-        scopes: &[T],
+        scopes: &[&str],
         sub: Option<&'a str>,
-    ) -> Self
-    where
-        T: std::string::ToString,
-    {
+    ) -> Self {
         let iat = Utc::now().timestamp();
         let expiry = iat + 3600 - 5; // Max validity is 1h.
 
-        let scope: String = scopes
-            .iter()
-            .map(|x| x.to_string())
-            .collect::<Vec<_>>()
-            .join(" ");
+        let mut scope = String::with_capacity(16);
+        for (i, s) in scopes.iter().enumerate() {
+            if i != 0 {
+                scope.push(' ');
+            }
+
+            scope.push_str(s);
+        }
+
         Claims {
             iss: &key.client_email,
             aud: &key.token_uri,
