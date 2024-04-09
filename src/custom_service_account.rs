@@ -25,6 +25,7 @@ pub struct CustomServiceAccount {
     credentials: ApplicationCredentials,
     signer: Signer,
     tokens: RwLock<HashMap<Vec<String>, Token>>,
+    subject: Option<String>,
 }
 
 impl CustomServiceAccount {
@@ -57,11 +58,18 @@ impl CustomServiceAccount {
         }
     }
 
+    /// Set the `subject` to impersonate a user
+    pub fn with_subject(mut self, subject: String) -> Self {
+        self.subject = Some(subject);
+        self
+    }
+
     fn new(credentials: ApplicationCredentials) -> Result<Self, Error> {
         Ok(Self {
             signer: Signer::new(&credentials.private_key)?,
             credentials,
             tokens: RwLock::new(HashMap::new()),
+            subject: None,
         })
     }
 
@@ -100,7 +108,8 @@ impl ServiceAccount for CustomServiceAccount {
         use hyper::header;
         use url::form_urlencoded;
 
-        let jwt = Claims::new(&self.credentials, scopes, None).to_jwt(&self.signer)?;
+        let jwt =
+            Claims::new(&self.credentials, scopes, self.subject.as_deref()).to_jwt(&self.signer)?;
         let rqbody = form_urlencoded::Serializer::new(String::new())
             .extend_pairs(&[("grant_type", GRANT_TYPE), ("assertion", jwt.as_str())])
             .finish();
