@@ -29,9 +29,6 @@ impl<'a> Claims<'a> {
         scopes: &[&str],
         sub: Option<&'a str>,
     ) -> Self {
-        let iat = Utc::now().timestamp();
-        let expiry = iat + 3600 - 5; // Max validity is 1h.
-
         let mut scope = String::with_capacity(16);
         for (i, s) in scopes.iter().enumerate() {
             if i != 0 {
@@ -41,10 +38,11 @@ impl<'a> Claims<'a> {
             scope.push_str(s);
         }
 
+        let iat = Utc::now().timestamp();
         Claims {
             iss: &key.client_email,
             aud: &key.token_uri,
-            exp: expiry,
+            exp: iat + 3600 - 5, // Max validity is 1h
             iat,
             sub,
             scope,
