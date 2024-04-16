@@ -17,6 +17,7 @@ pub(crate) struct MetadataServiceAccount {
 }
 
 impl MetadataServiceAccount {
+    // https://cloud.google.com/compute/docs/metadata/predefined-metadata-keys
     const DEFAULT_PROJECT_ID_GCP_URI: &'static str =
         "http://metadata.google.internal/computeMetadata/v1/project/project-id";
     const DEFAULT_TOKEN_GCP_URI: &'static str = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token";
