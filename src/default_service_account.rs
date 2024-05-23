@@ -8,11 +8,11 @@ use tracing::{instrument, Level};
 
 use crate::authentication_manager::ServiceAccount;
 use crate::error::Error;
-use crate::types::{HyperClient, Token, HyperExt};
+use crate::types::{HttpClient, HyperExt, Token};
 
 #[derive(Debug)]
 pub(crate) struct MetadataServiceAccount {
-    client: HyperClient,
+    client: HttpClient,
     token: RwLock<Arc<Token>>,
 }
 
@@ -22,7 +22,7 @@ impl MetadataServiceAccount {
         "http://metadata.google.internal/computeMetadata/v1/project/project-id";
     const DEFAULT_TOKEN_GCP_URI: &'static str = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token";
 
-    pub(crate) async fn new(client: &HyperClient) -> Result<Self, Error> {
+    pub(crate) async fn new(client: &HttpClient) -> Result<Self, Error> {
         let token = RwLock::new(Self::get_token(client).await?);
         Ok(Self {
             client: client.clone(),
@@ -40,7 +40,7 @@ impl MetadataServiceAccount {
     }
 
     #[instrument(level = Level::DEBUG)]
-    async fn get_token(client: &HyperClient) -> Result<Arc<Token>, Error> {
+    async fn get_token(client: &HttpClient) -> Result<Arc<Token>, Error> {
         let mut retries = 0;
         tracing::debug!("Getting token from GCP instance metadata server");
         let response = loop {
