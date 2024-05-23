@@ -1,21 +1,19 @@
-use std::sync::Arc;
 use std::time::Duration;
 use std::{fmt, io};
 
 use chrono::{DateTime, Utc};
 use hyper::Client;
 use hyper_rustls::HttpsConnectorBuilder;
-use ring::{
-    rand::SystemRandom,
-    signature::{RsaKeyPair, RSA_PKCS1_SHA256},
-};
+use ring::rand::SystemRandom;
+use ring::signature::{RsaKeyPair, RSA_PKCS1_SHA256};
 use serde::{Deserialize, Deserializer};
 
 use crate::Error;
-/// Represents an access token. All access tokens are Bearer tokens.
+
+/// Represents an access token that can be used as a bearer token in HTTP requests
 ///
 /// Tokens should not be cached, the [`AuthenticationManager`] handles the correct caching
-/// already.  Tokens are cheap to clone.
+/// already.
 ///
 /// The token does not implement [`Display`] to avoid accidentally printing the token in log
 /// files, likewise [`Debug`] does not expose the token value itself which is only available
@@ -23,38 +21,11 @@ use crate::Error;
 ///
 /// [`AuthenticationManager`]: crate::AuthenticationManager
 /// [`Display`]: fmt::Display
-/// [`Debug`]: fmt::Debug
-#[derive(Clone, PartialEq, Eq, Deserialize)]
-pub struct Token {
-    #[serde(flatten)]
-    inner: Arc<InnerToken>,
-}
-
-impl Token {
-    pub(crate) fn from_string(access_token: String, expires_in: Duration) -> Self {
-        Token {
-            inner: Arc::new(InnerToken {
-                access_token,
-                expires_at: Utc::now() + expires_in,
-            }),
-        }
-    }
-}
-
-impl fmt::Debug for Token {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Token")
-            .field("access_token", &"****")
-            .field("expires_at", &self.inner.expires_at)
-            .finish()
-    }
-}
-
 /// Token data as returned by the server
 ///
 /// https://cloud.google.com/iam/docs/reference/sts/rest/v1/TopLevel/token#response-body
-#[derive(Clone, PartialEq, Eq, Deserialize)]
-struct InnerToken {
+#[derive(Clone, Deserialize)]
+pub struct Token {
     access_token: String,
     #[serde(
         deserialize_with = "deserialize_time",
@@ -64,6 +35,13 @@ struct InnerToken {
 }
 
 impl Token {
+    pub(crate) fn from_string(access_token: String, expires_in: Duration) -> Self {
+        Token {
+            access_token,
+            expires_at: Utc::now() + expires_in,
+        }
+    }
+
     /// Define if the token has has_expired
     ///
     /// This takes an additional 30s margin to ensure the token can still be reasonably used
@@ -75,17 +53,26 @@ impl Token {
     /// The docs state, the metadata server caches tokens until 5 minutes before expiry.
     /// We use 20s to be on the safe side.
     pub fn has_expired(&self) -> bool {
-        self.inner.expires_at - Duration::from_secs(20) <= Utc::now()
+        self.expires_at - Duration::from_secs(20) <= Utc::now()
     }
 
     /// Get str representation of the token.
     pub fn as_str(&self) -> &str {
-        &self.inner.access_token
+        &self.access_token
     }
 
     /// Get expiry of token, if available
     pub fn expires_at(&self) -> DateTime<Utc> {
-        self.inner.expires_at
+        self.expires_at
+    }
+}
+
+impl fmt::Debug for Token {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Token")
+            .field("access_token", &"****")
+            .field("expires_at", &self.expires_at)
+            .finish()
     }
 }
 

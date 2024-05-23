@@ -1,5 +1,5 @@
 use std::str;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 use async_trait::async_trait;
 use hyper::body::Body;
@@ -13,7 +13,7 @@ use crate::util::HyperExt;
 
 #[derive(Debug)]
 pub(crate) struct MetadataServiceAccount {
-    token: RwLock<Token>,
+    token: RwLock<Arc<Token>>,
 }
 
 impl MetadataServiceAccount {
@@ -37,7 +37,7 @@ impl MetadataServiceAccount {
     }
 
     #[instrument(level = Level::DEBUG)]
-    async fn get_token(client: &HyperClient) -> Result<Token, Error> {
+    async fn get_token(client: &HyperClient) -> Result<Arc<Token>, Error> {
         let mut retries = 0;
         tracing::debug!("Getting token from GCP instance metadata server");
         let response = loop {
@@ -58,7 +58,10 @@ impl MetadataServiceAccount {
             }
         };
 
-        response.deserialize().await.map_err(Into::into)
+        match response.deserialize::<Token>().await {
+            Ok(token) => Ok(Arc::new(token)),
+            Err(e) => Err(e.into()),
+        }
     }
 }
 
@@ -79,11 +82,15 @@ impl ServiceAccount for MetadataServiceAccount {
         }
     }
 
-    fn get_token(&self, _scopes: &[&str]) -> Option<Token> {
+    fn get_token(&self, _scopes: &[&str]) -> Option<Arc<Token>> {
         Some(self.token.read().unwrap().clone())
     }
 
-    async fn refresh_token(&self, client: &HyperClient, _scopes: &[&str]) -> Result<Token, Error> {
+    async fn refresh_token(
+        &self,
+        client: &HyperClient,
+        _scopes: &[&str],
+    ) -> Result<Arc<Token>, Error> {
         let token = Self::get_token(client).await?;
         *self.token.write().unwrap() = token.clone();
         Ok(token)

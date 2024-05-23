@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::path::{Path, PathBuf};
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock};
 
 use async_trait::async_trait;
 use base64::{engine::general_purpose::URL_SAFE, Engine};
@@ -24,7 +24,7 @@ use crate::util::HyperExt;
 pub struct CustomServiceAccount {
     credentials: ApplicationCredentials,
     signer: Signer,
-    tokens: RwLock<HashMap<Vec<String>, Token>>,
+    tokens: RwLock<HashMap<Vec<String>, Arc<Token>>>,
     subject: Option<String>,
 }
 
@@ -98,13 +98,17 @@ impl ServiceAccount for CustomServiceAccount {
         }
     }
 
-    fn get_token(&self, scopes: &[&str]) -> Option<Token> {
+    fn get_token(&self, scopes: &[&str]) -> Option<Arc<Token>> {
         let key: Vec<_> = scopes.iter().map(|x| x.to_string()).collect();
         self.tokens.read().unwrap().get(&key).cloned()
     }
 
     #[instrument(level = Level::DEBUG)]
-    async fn refresh_token(&self, client: &HyperClient, scopes: &[&str]) -> Result<Token, Error> {
+    async fn refresh_token(
+        &self,
+        client: &HyperClient,
+        scopes: &[&str],
+    ) -> Result<Arc<Token>, Error> {
         use hyper::header;
         use url::form_urlencoded;
 
@@ -137,7 +141,7 @@ impl ServiceAccount for CustomServiceAccount {
             }
         };
 
-        let token = response.deserialize::<Token>().await?;
+        let token = Arc::new(response.deserialize::<Token>().await?);
 
         let key = scopes.iter().map(|x| (*x).to_string()).collect();
         self.tokens.write().unwrap().insert(key, token.clone());

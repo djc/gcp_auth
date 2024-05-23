@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use tokio::sync::Mutex;
 use tracing::{instrument, Level};
@@ -12,8 +14,8 @@ use crate::types::{self, HyperClient, Token};
 #[async_trait]
 pub(crate) trait ServiceAccount: Send + Sync {
     async fn project_id(&self, client: &HyperClient) -> Result<String, Error>;
-    fn get_token(&self, scopes: &[&str]) -> Option<Token>;
-    async fn refresh_token(&self, client: &HyperClient, scopes: &[&str]) -> Result<Token, Error>;
+    fn get_token(&self, scopes: &[&str]) -> Option<Arc<Token>>;
+    async fn refresh_token(&self, client: &HyperClient, scopes: &[&str]) -> Result<Arc<Token>, Error>;
 }
 
 /// Authentication manager is responsible for caching and obtaining credentials for the required
@@ -91,7 +93,7 @@ impl AuthenticationManager {
     /// Requests Bearer token for the provided scope
     ///
     /// Token can be used in the request authorization header in format "Bearer {token}"
-    pub async fn get_token(&self, scopes: &[&str]) -> Result<Token, Error> {
+    pub async fn get_token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error> {
         let token = self.service_account.get_token(scopes);
         if let Some(token) = token.filter(|token| !token.has_expired()) {
             return Ok(token);

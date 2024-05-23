@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::Arc;
 use std::sync::RwLock;
 use std::time::Duration;
 
@@ -21,7 +22,7 @@ pub(crate) const DEFAULT_TOKEN_DURATION: Duration = Duration::from_secs(3600);
 pub(crate) struct GCloudAuthorizedUser {
     gcloud: PathBuf,
     project_id: Option<String>,
-    token: RwLock<Token>,
+    token: RwLock<Arc<Token>>,
 }
 
 impl GCloudAuthorizedUser {
@@ -36,11 +37,11 @@ impl GCloudAuthorizedUser {
         })
     }
 
-    fn token(gcloud: &Path) -> Result<Token, Error> {
-        Ok(Token::from_string(
+    fn token(gcloud: &Path) -> Result<Arc<Token>, Error> {
+        Ok(Arc::new(Token::from_string(
             run(gcloud, &["auth", "print-access-token", "--quiet"])?,
             DEFAULT_TOKEN_DURATION,
-        ))
+        )))
     }
 }
 
@@ -50,11 +51,15 @@ impl ServiceAccount for GCloudAuthorizedUser {
         self.project_id.clone().ok_or(Error::NoProjectId)
     }
 
-    fn get_token(&self, _scopes: &[&str]) -> Option<Token> {
+    fn get_token(&self, _scopes: &[&str]) -> Option<Arc<Token>> {
         Some(self.token.read().unwrap().clone())
     }
 
-    async fn refresh_token(&self, _client: &HyperClient, _scopes: &[&str]) -> Result<Token, Error> {
+    async fn refresh_token(
+        &self,
+        _client: &HyperClient,
+        _scopes: &[&str],
+    ) -> Result<Arc<Token>, Error> {
         let token = Self::token(&self.gcloud)?;
         *self.token.write().unwrap() = token.clone();
         Ok(token)
