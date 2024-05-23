@@ -41,12 +41,12 @@ impl GCloudAuthorizedUser {
 
 #[async_trait]
 impl ServiceAccount for GCloudAuthorizedUser {
-    async fn project_id(&self) -> Result<Arc<str>, Error> {
-        self.project_id.clone().ok_or(Error::NoProjectId)
+    async fn token(&self, _scopes: &[&str]) -> Option<Arc<Token>> {
+        Some(self.token.read().unwrap().clone())
     }
 
-    async fn get_token(&self, _scopes: &[&str]) -> Option<Arc<Token>> {
-        Some(self.token.read().unwrap().clone())
+    async fn project_id(&self) -> Result<Arc<str>, Error> {
+        self.project_id.clone().ok_or(Error::NoProjectId)
     }
 
     async fn refresh_token(&self, _scopes: &[&str]) -> Result<Arc<Token>, Error> {
@@ -88,7 +88,7 @@ mod tests {
     async fn gcloud() {
         let gcloud = GCloudAuthorizedUser::new().await.unwrap();
         println!("{:?}", gcloud.project_id);
-        if let Some(t) = gcloud.get_token(&[""]).await {
+        if let Some(t) = gcloud.token(&[""]).await {
             let expires = Utc::now() + DEFAULT_TOKEN_DURATION;
             println!("{:?}", t);
             assert!(!t.has_expired());

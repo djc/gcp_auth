@@ -109,16 +109,16 @@ impl CustomServiceAccount {
 
 #[async_trait]
 impl ServiceAccount for CustomServiceAccount {
+    async fn token(&self, scopes: &[&str]) -> Option<Arc<Token>> {
+        let key: Vec<_> = scopes.iter().map(|x| x.to_string()).collect();
+        self.tokens.read().unwrap().get(&key).cloned()
+    }
+
     async fn project_id(&self) -> Result<Arc<str>, Error> {
         match &self.credentials.project_id {
             Some(pid) => Ok(pid.clone()),
             None => Err(Error::ProjectIdNotFound),
         }
-    }
-
-    async fn get_token(&self, scopes: &[&str]) -> Option<Arc<Token>> {
-        let key: Vec<_> = scopes.iter().map(|x| x.to_string()).collect();
-        self.tokens.read().unwrap().get(&key).cloned()
     }
 
     #[instrument(level = Level::DEBUG)]

@@ -65,15 +65,15 @@ impl ConfigDefaultCredentials {
 
 #[async_trait]
 impl ServiceAccount for ConfigDefaultCredentials {
+    async fn token(&self, _scopes: &[&str]) -> Option<Arc<Token>> {
+        Some(self.token.read().unwrap().clone())
+    }
+
     async fn project_id(&self) -> Result<Arc<str>, Error> {
         self.credentials
             .quota_project_id
             .clone()
             .ok_or(Error::NoProjectId)
-    }
-
-    async fn get_token(&self, _scopes: &[&str]) -> Option<Arc<Token>> {
-        Some(self.token.read().unwrap().clone())
     }
 
     async fn refresh_token(&self, _scopes: &[&str]) -> Result<Arc<Token>, Error> {
