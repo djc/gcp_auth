@@ -7,7 +7,7 @@ use hyper::{Method, Request};
 use tokio::sync::RwLock;
 use tracing::{instrument, Level};
 
-use crate::authentication_manager::TokenProvider;
+use crate::TokenProvider;
 use crate::error::Error;
 use crate::types::{HttpClient, Token};
 
