@@ -12,11 +12,6 @@ use crate::error::Error;
 use crate::error::Error::{GCloudError, GCloudNotFound, GCloudParseError};
 use crate::Token;
 
-/// The default number of seconds that it takes for a Google Cloud auth token to expire.
-/// This appears to be the default from practical testing, but we have not found evidence
-/// that this will always be the default duration.
-pub(crate) const DEFAULT_TOKEN_DURATION: Duration = Duration::from_secs(3600);
-
 #[derive(Debug)]
 pub(crate) struct GCloudAuthorizedUser {
     gcloud: PathBuf,
@@ -76,6 +71,11 @@ fn run(gcloud: &Path, cmd: &[&str]) -> Result<String, Error> {
 
     String::from_utf8(stdout).map_err(|_| GCloudParseError)
 }
+
+/// The default number of seconds that it takes for a Google Cloud auth token to expire.
+/// This appears to be the default from practical testing, but we have not found evidence
+/// that this will always be the default duration.
+pub(crate) const DEFAULT_TOKEN_DURATION: Duration = Duration::from_secs(3600);
 
 #[cfg(test)]
 mod tests {
