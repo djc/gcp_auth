@@ -45,7 +45,7 @@ impl ServiceAccount for GCloudAuthorizedUser {
         self.project_id.clone().ok_or(Error::NoProjectId)
     }
 
-    fn get_token(&self, _scopes: &[&str]) -> Option<Arc<Token>> {
+    async fn get_token(&self, _scopes: &[&str]) -> Option<Arc<Token>> {
         Some(self.token.read().unwrap().clone())
     }
 
@@ -88,7 +88,7 @@ mod tests {
     async fn gcloud() {
         let gcloud = GCloudAuthorizedUser::new().await.unwrap();
         println!("{:?}", gcloud.project_id);
-        if let Some(t) = gcloud.get_token(&[""]) {
+        if let Some(t) = gcloud.get_token(&[""]).await {
             let expires = Utc::now() + DEFAULT_TOKEN_DURATION;
             println!("{:?}", t);
             assert!(!t.has_expired());

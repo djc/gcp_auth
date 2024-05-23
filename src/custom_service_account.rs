@@ -116,7 +116,7 @@ impl ServiceAccount for CustomServiceAccount {
         }
     }
 
-    fn get_token(&self, scopes: &[&str]) -> Option<Arc<Token>> {
+    async fn get_token(&self, scopes: &[&str]) -> Option<Arc<Token>> {
         let key: Vec<_> = scopes.iter().map(|x| x.to_string()).collect();
         self.tokens.read().unwrap().get(&key).cloned()
     }
