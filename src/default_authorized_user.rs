@@ -1,4 +1,5 @@
 use std::fs;
+use std::sync::Arc;
 use std::sync::RwLock;
 
 use async_trait::async_trait;
@@ -14,7 +15,7 @@ use crate::util::HyperExt;
 
 #[derive(Debug)]
 pub(crate) struct ConfigDefaultCredentials {
-    token: RwLock<Token>,
+    token: RwLock<Arc<Token>>,
     credentials: UserCredentials,
 }
 
@@ -48,7 +49,7 @@ impl ConfigDefaultCredentials {
     }
 
     #[instrument(level = Level::DEBUG)]
-    async fn get_token(cred: &UserCredentials, client: &HyperClient) -> Result<Token, Error> {
+    async fn get_token(cred: &UserCredentials, client: &HyperClient) -> Result<Arc<Token>, Error> {
         let mut retries = 0;
         let response = loop {
             let req = Self::build_token_request(&RefreshRequest {
@@ -86,11 +87,15 @@ impl ServiceAccount for ConfigDefaultCredentials {
             .ok_or(Error::NoProjectId)
     }
 
-    fn get_token(&self, _scopes: &[&str]) -> Option<Token> {
+    fn get_token(&self, _scopes: &[&str]) -> Option<Arc<Token>> {
         Some(self.token.read().unwrap().clone())
     }
 
-    async fn refresh_token(&self, client: &HyperClient, _scopes: &[&str]) -> Result<Token, Error> {
+    async fn refresh_token(
+        &self,
+        client: &HyperClient,
+        _scopes: &[&str],
+    ) -> Result<Arc<Token>, Error> {
         let token = Self::get_token(&self.credentials, client).await?;
         *self.token.write().unwrap() = token.clone();
         Ok(token)
