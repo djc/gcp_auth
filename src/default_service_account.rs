@@ -8,8 +8,7 @@ use tracing::{instrument, Level};
 
 use crate::authentication_manager::ServiceAccount;
 use crate::error::Error;
-use crate::types::{HyperClient, Token};
-use crate::util::HyperExt;
+use crate::types::{HyperClient, Token, HyperExt};
 
 #[derive(Debug)]
 pub(crate) struct MetadataServiceAccount {
