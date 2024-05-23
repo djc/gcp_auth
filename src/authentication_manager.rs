@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use async_trait::async_trait;
 use tracing::{instrument, Level};
 
 use crate::custom_service_account::CustomServiceAccount;
@@ -9,12 +8,7 @@ use crate::default_service_account::MetadataServiceAccount;
 use crate::error::Error;
 use crate::gcloud_authorized_user::GCloudAuthorizedUser;
 use crate::types::{HttpClient, Token};
-
-#[async_trait]
-pub(crate) trait TokenProvider: Send + Sync {
-    async fn token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error>;
-    async fn project_id(&self) -> Result<Arc<str>, Error>;
-}
+use crate::TokenProvider;
 
 /// Authentication manager is responsible for caching and obtaining credentials for the required
 /// scope

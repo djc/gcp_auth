@@ -89,6 +89,10 @@
 #![deny(unreachable_pub)]
 #![allow(clippy::pedantic)]
 
+use std::sync::Arc;
+
+use async_trait::async_trait;
+
 mod authentication_manager;
 mod custom_service_account;
 mod default_authorized_user;
@@ -101,3 +105,9 @@ pub use authentication_manager::AuthenticationManager;
 pub use custom_service_account::CustomServiceAccount;
 pub use error::Error;
 pub use types::{Signer, Token};
+
+#[async_trait]
+pub(crate) trait TokenProvider: Send + Sync {
+    async fn token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error>;
+    async fn project_id(&self) -> Result<Arc<str>, Error>;
+}
