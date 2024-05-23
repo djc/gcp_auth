@@ -11,6 +11,54 @@ use serde::{Deserialize, Deserializer};
 
 use crate::Error;
 
+#[derive(Clone, Debug)]
+pub(crate) struct HttpClient {
+    inner: hyper::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>>,
+}
+
+impl HttpClient {
+    pub(crate) fn new() -> Result<Self, Error> {
+        #[cfg(feature = "webpki-roots")]
+        let https = HttpsConnectorBuilder::new().with_webpki_roots();
+        #[cfg(not(feature = "webpki-roots"))]
+        let https = HttpsConnectorBuilder::new().with_native_roots()?;
+
+        Ok(Self {
+            inner: Client::builder()
+                .build::<_, hyper::Body>(https.https_or_http().enable_http2().build()),
+        })
+    }
+
+    pub(crate) async fn token(
+        &self,
+        req: hyper::Request<hyper::Body>,
+    ) -> Result<Arc<Token>, Error> {
+        let (parts, body) = self.inner.request(req).await?.into_parts();
+        let body = hyper::body::to_bytes(body)
+            .await
+            .map_err(Error::ConnectionError)?;
+
+        if !parts.status.is_success() {
+            let error = format!(
+                "Server responded with error {}: {}",
+                parts.status,
+                String::from_utf8_lossy(body.as_ref())
+            );
+            tracing::error!("{}", error);
+            return Err(Error::ServerUnavailable(error));
+        }
+
+        serde_json::from_slice(&body).map_err(Error::ParsingError)
+    }
+
+    pub(crate) async fn request(
+        &self,
+        req: hyper::Request<hyper::Body>,
+    ) -> Result<hyper::Response<hyper::body::Body>, hyper::Error> {
+        self.inner.request(req).await
+    }
+}
+
 /// Represents an access token that can be used as a bearer token in HTTP requests
 ///
 /// Tokens should not be cached, the [`AuthenticationManager`] handles the correct caching
@@ -131,54 +179,6 @@ where
 {
     let seconds_from_now: u64 = Deserialize::deserialize(deserializer)?;
     Ok(Utc::now() + Duration::from_secs(seconds_from_now))
-}
-
-#[derive(Clone, Debug)]
-pub(crate) struct HttpClient {
-    inner: hyper::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>>,
-}
-
-impl HttpClient {
-    pub(crate) fn new() -> Result<Self, Error> {
-        #[cfg(feature = "webpki-roots")]
-        let https = HttpsConnectorBuilder::new().with_webpki_roots();
-        #[cfg(not(feature = "webpki-roots"))]
-        let https = HttpsConnectorBuilder::new().with_native_roots()?;
-
-        Ok(Self {
-            inner: Client::builder()
-                .build::<_, hyper::Body>(https.https_or_http().enable_http2().build()),
-        })
-    }
-
-    pub(crate) async fn token(
-        &self,
-        req: hyper::Request<hyper::Body>,
-    ) -> Result<Arc<Token>, Error> {
-        let (parts, body) = self.inner.request(req).await?.into_parts();
-        let body = hyper::body::to_bytes(body)
-            .await
-            .map_err(Error::ConnectionError)?;
-
-        if !parts.status.is_success() {
-            let error = format!(
-                "Server responded with error {}: {}",
-                parts.status,
-                String::from_utf8_lossy(body.as_ref())
-            );
-            tracing::error!("{}", error);
-            return Err(Error::ServerUnavailable(error));
-        }
-
-        serde_json::from_slice(&body).map_err(Error::ParsingError)
-    }
-
-    pub(crate) async fn request(
-        &self,
-        req: hyper::Request<hyper::Body>,
-    ) -> Result<hyper::Response<hyper::body::Body>, hyper::Error> {
-        self.inner.request(req).await
-    }
 }
 
 #[cfg(test)]
