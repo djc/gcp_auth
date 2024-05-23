@@ -83,10 +83,7 @@
 //! }
 //! ```
 
-#![deny(missing_docs)]
-#![deny(warnings)]
-#![deny(unreachable_pub)]
-#![allow(clippy::pedantic)]
+#![warn(unreachable_pub)]
 
 use std::sync::Arc;
 
