@@ -134,16 +134,34 @@ where
 }
 
 pub(crate) fn client() -> Result<HyperClient, Error> {
-    #[cfg(feature = "webpki-roots")]
-    let https = HttpsConnectorBuilder::new().with_webpki_roots();
-    #[cfg(not(feature = "webpki-roots"))]
-    let https = HttpsConnectorBuilder::new().with_native_roots()?;
-
-    Ok(Client::builder().build::<_, hyper::Body>(https.https_or_http().enable_http2().build()))
+    HyperClient::new()
 }
 
-pub(crate) type HyperClient =
-    hyper::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>>;
+#[derive(Clone, Debug)]
+pub(crate) struct HyperClient {
+    inner: hyper::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>>,
+}
+
+impl HyperClient {
+    pub(crate) fn new() -> Result<Self, Error> {
+        #[cfg(feature = "webpki-roots")]
+        let https = HttpsConnectorBuilder::new().with_webpki_roots();
+        #[cfg(not(feature = "webpki-roots"))]
+        let https = HttpsConnectorBuilder::new().with_native_roots()?;
+
+        Ok(Self {
+            inner: Client::builder()
+                .build::<_, hyper::Body>(https.https_or_http().enable_http2().build()),
+        })
+    }
+
+    pub(crate) async fn request(
+        &self,
+        req: hyper::Request<hyper::Body>,
+    ) -> Result<hyper::Response<hyper::body::Body>, hyper::Error> {
+        self.inner.request(req).await
+    }
+}
 
 #[async_trait]
 pub(crate) trait HyperExt {
