@@ -106,8 +106,15 @@ pub use custom_service_account::CustomServiceAccount;
 pub use error::Error;
 pub use types::{Signer, Token};
 
+/// A trait for an authentication context that can provide tokens
 #[async_trait]
-pub(crate) trait TokenProvider: Send + Sync {
+pub trait TokenProvider: Send + Sync {
+    /// Get a valid token for the given scopes
+    ///
+    /// Tokens are cached until they expire, so this method will only fetch a fresh token once
+    /// the current token (for the given scopes) has expired.
     async fn token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error>;
+
+    /// Get the project ID for the authentication context
     async fn project_id(&self) -> Result<Arc<str>, Error>;
 }
