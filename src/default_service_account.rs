@@ -8,7 +8,7 @@ use tracing::{instrument, Level};
 
 use crate::authentication_manager::ServiceAccount;
 use crate::error::Error;
-use crate::types::{HttpClient, HyperExt, Token};
+use crate::types::{HttpClient, Token};
 
 #[derive(Debug)]
 pub(crate) struct MetadataServiceAccount {
@@ -43,12 +43,12 @@ impl MetadataServiceAccount {
     async fn get_token(client: &HttpClient) -> Result<Arc<Token>, Error> {
         let mut retries = 0;
         tracing::debug!("Getting token from GCP instance metadata server");
-        let response = loop {
+        loop {
             let req = Self::build_token_request(Self::DEFAULT_TOKEN_GCP_URI);
 
-            let err = match client.request(req).await {
+            let err = match client.token(req).await {
                 // Early return when the request succeeds
-                Ok(response) => break response,
+                Ok(token) => return Ok(token),
                 Err(err) => err,
             };
 
@@ -57,13 +57,8 @@ impl MetadataServiceAccount {
             );
             retries += 1;
             if retries >= RETRY_COUNT {
-                return Err(Error::ConnectionError(err));
+                return Err(err);
             }
-        };
-
-        match response.deserialize::<Token>().await {
-            Ok(token) => Ok(Arc::new(token)),
-            Err(e) => Err(e.into()),
         }
     }
 }

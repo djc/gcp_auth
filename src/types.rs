@@ -1,7 +1,7 @@
+use std::sync::Arc;
 use std::time::Duration;
 use std::{fmt, io};
 
-use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use hyper::Client;
 use hyper_rustls::HttpsConnectorBuilder;
@@ -151,28 +151,11 @@ impl HttpClient {
         })
     }
 
-    pub(crate) async fn request(
+    pub(crate) async fn token(
         &self,
         req: hyper::Request<hyper::Body>,
-    ) -> Result<hyper::Response<hyper::body::Body>, hyper::Error> {
-        self.inner.request(req).await
-    }
-}
-
-#[async_trait]
-pub(crate) trait HyperExt {
-    async fn deserialize<T>(self) -> Result<T, Error>
-    where
-        T: serde::de::DeserializeOwned;
-}
-
-#[async_trait]
-impl HyperExt for hyper::Response<hyper::body::Body> {
-    async fn deserialize<T>(self) -> Result<T, Error>
-    where
-        T: serde::de::DeserializeOwned,
-    {
-        let (parts, body) = self.into_parts();
+    ) -> Result<Arc<Token>, Error> {
+        let (parts, body) = self.inner.request(req).await?.into_parts();
         let body = hyper::body::to_bytes(body)
             .await
             .map_err(Error::ConnectionError)?;
@@ -187,8 +170,14 @@ impl HyperExt for hyper::Response<hyper::body::Body> {
             return Err(Error::ServerUnavailable(error));
         }
 
-        let token = serde_json::from_slice(&body).map_err(Error::ParsingError)?;
-        Ok(token)
+        serde_json::from_slice(&body).map_err(Error::ParsingError)
+    }
+
+    pub(crate) async fn request(
+        &self,
+        req: hyper::Request<hyper::Body>,
+    ) -> Result<hyper::Response<hyper::body::Body>, hyper::Error> {
+        self.inner.request(req).await
     }
 }
 
