@@ -57,7 +57,7 @@ impl ServiceAccount for MetadataServiceAccount {
         }
     }
 
-    fn get_token(&self, _scopes: &[&str]) -> Option<Arc<Token>> {
+    async fn get_token(&self, _scopes: &[&str]) -> Option<Arc<Token>> {
         Some(self.token.read().unwrap().clone())
     }
 
