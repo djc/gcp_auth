@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::{env, fmt};
 
 use async_trait::async_trait;
@@ -12,6 +12,7 @@ use hyper::body::Body;
 use hyper::header::CONTENT_TYPE;
 use hyper::Request;
 use serde::{Deserialize, Serialize};
+use tokio::sync::RwLock;
 use tracing::{instrument, Level};
 use url::form_urlencoded;
 
@@ -111,7 +112,7 @@ impl CustomServiceAccount {
 impl ServiceAccount for CustomServiceAccount {
     async fn token(&self, scopes: &[&str]) -> Option<Arc<Token>> {
         let key: Vec<_> = scopes.iter().map(|x| x.to_string()).collect();
-        self.tokens.read().unwrap().get(&key).cloned()
+        self.tokens.read().await.get(&key).cloned()
     }
 
     async fn project_id(&self) -> Result<Arc<str>, Error> {
@@ -123,9 +124,10 @@ impl ServiceAccount for CustomServiceAccount {
 
     #[instrument(level = Level::DEBUG)]
     async fn refresh_token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error> {
+        let mut locked = self.tokens.write().await;
         let token = self.fetch_token(scopes).await?;
         let key = scopes.iter().map(|x| (*x).to_string()).collect();
-        self.tokens.write().unwrap().insert(key, token.clone());
+        locked.insert(key, token.clone());
         Ok(token)
     }
 }

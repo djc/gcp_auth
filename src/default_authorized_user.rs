@@ -1,12 +1,12 @@
 use std::fs;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 use async_trait::async_trait;
 use hyper::body::Body;
 use hyper::header::CONTENT_TYPE;
 use hyper::{Method, Request};
 use serde::{Deserialize, Serialize};
+use tokio::sync::RwLock;
 use tracing::{instrument, Level};
 
 use crate::authentication_manager::ServiceAccount;
@@ -66,7 +66,7 @@ impl ConfigDefaultCredentials {
 #[async_trait]
 impl ServiceAccount for ConfigDefaultCredentials {
     async fn token(&self, _scopes: &[&str]) -> Option<Arc<Token>> {
-        Some(self.token.read().unwrap().clone())
+        Some(self.token.read().await.clone())
     }
 
     async fn project_id(&self) -> Result<Arc<str>, Error> {
@@ -77,8 +77,9 @@ impl ServiceAccount for ConfigDefaultCredentials {
     }
 
     async fn refresh_token(&self, _scopes: &[&str]) -> Result<Arc<Token>, Error> {
+        let mut locked = self.token.write().await;
         let token = Self::get_token(&self.credentials, &self.client).await?;
-        *self.token.write().unwrap() = token.clone();
+        *locked = token.clone();
         Ok(token)
     }
 }

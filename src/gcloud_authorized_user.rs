@@ -1,10 +1,10 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::Arc;
-use std::sync::RwLock;
 use std::time::Duration;
 
 use async_trait::async_trait;
+use tokio::sync::RwLock;
 use which::which;
 
 use crate::authentication_manager::ServiceAccount;
@@ -42,7 +42,7 @@ impl GCloudAuthorizedUser {
 #[async_trait]
 impl ServiceAccount for GCloudAuthorizedUser {
     async fn token(&self, _scopes: &[&str]) -> Option<Arc<Token>> {
-        Some(self.token.read().unwrap().clone())
+        Some(self.token.read().await.clone())
     }
 
     async fn project_id(&self) -> Result<Arc<str>, Error> {
@@ -50,8 +50,9 @@ impl ServiceAccount for GCloudAuthorizedUser {
     }
 
     async fn refresh_token(&self, _scopes: &[&str]) -> Result<Arc<Token>, Error> {
+        let mut locked = self.token.write().await;
         let token = Self::token(&self.gcloud)?;
-        *self.token.write().unwrap() = token.clone();
+        *locked = token.clone();
         Ok(token)
     }
 }
