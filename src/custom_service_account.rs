@@ -69,6 +69,28 @@ impl CustomServiceAccount {
         })
     }
 
+    async fn fetch_token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error> {
+        let jwt =
+            Claims::new(&self.credentials, scopes, self.subject.as_deref()).to_jwt(&self.signer)?;
+        let body = form_urlencoded::Serializer::new(String::new())
+            .extend_pairs(&[("grant_type", GRANT_TYPE), ("assertion", jwt.as_str())])
+            .finish();
+        let token = self
+            .client
+            .token(
+                &|| {
+                    Request::post(&self.credentials.token_uri)
+                        .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+                        .body(Body::from(body.clone()))
+                        .unwrap()
+                },
+                "CustomServiceAccount",
+            )
+            .await?;
+
+        Ok(token)
+    }
+
     /// The RSA PKCS1 SHA256 [`Signer`] used to sign JWT tokens
     pub fn signer(&self) -> &Signer {
         &self.signer
@@ -101,24 +123,7 @@ impl ServiceAccount for CustomServiceAccount {
 
     #[instrument(level = Level::DEBUG)]
     async fn refresh_token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error> {
-        let jwt =
-            Claims::new(&self.credentials, scopes, self.subject.as_deref()).to_jwt(&self.signer)?;
-        let body = form_urlencoded::Serializer::new(String::new())
-            .extend_pairs(&[("grant_type", GRANT_TYPE), ("assertion", jwt.as_str())])
-            .finish();
-        let token = self
-            .client
-            .token(
-                &|| {
-                    Request::post(&self.credentials.token_uri)
-                        .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
-                        .body(Body::from(body.clone()))
-                        .unwrap()
-                },
-                "CustomServiceAccount",
-            )
-            .await?;
-
+        let token = self.fetch_token(scopes).await?;
         let key = scopes.iter().map(|x| (*x).to_string()).collect();
         self.tokens.write().unwrap().insert(key, token.clone());
         Ok(token)
