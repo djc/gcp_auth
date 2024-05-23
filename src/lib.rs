@@ -16,23 +16,22 @@
 //! 3. Use the default service account by retrieving a token from the metadata server.
 //! 4. Retrieving a token from the `gcloud` CLI tool, if it is available on the `PATH`.
 //!
-//! For more details, see [`AuthenticationManager::new()`].
+//! For more details, see [`provider()`].
 //!
-//! The `AuthenticationManager` handles caching tokens for their lifetime; it will not make a request if
+//! A [`TokenProvider`] handles caching tokens for their lifetime; it will not make a request if
 //! an appropriate token is already cached. Therefore, the caller should not cache tokens.
 //!
 //! ## Simple usage
 //!
-//! The default way to use this library is to get instantiate an [`AuthenticationManager`]. It will
-//! find the appropriate authentication method and use it to retrieve tokens.
+//! The default way to use this library is to select the appropriate token provider using
+//! [`provider()`]. It will find the appropriate authentication method and use it to retrieve
+//! tokens.
 //!
 //! ```rust,no_run
 //! # async fn get_token() -> Result<(), gcp_auth::Error> {
-//! use gcp_auth::AuthenticationManager;
-//!
-//! let authentication_manager = AuthenticationManager::new().await?;
+//! let provider = gcp_auth::provider().await?;
 //! let scopes = &["https://www.googleapis.com/auth/cloud-platform"];
-//! let token = authentication_manager.get_token(scopes).await?;
+//! let token = provider.token(scopes).await?;
 //! # Ok(())
 //! # }
 //! ```
@@ -40,7 +39,7 @@
 //! ## Supplying service account credentials
 //!
 //! When running outside of GCP (for example, on a development machine), it can be useful to supply
-//! service account credentials. The first method checked by [`AuthenticationManager::new()`] is to
+//! service account credentials. The first method checked by [`provider()`] is to
 //! read a path to a file containing JSON credentials in the `GOOGLE_APPLICATION_CREDENTIALS`
 //! environment variable. However, you may also supply a custom path to read credentials from, or
 //! a `&str` containing the credentials. In both of these cases, you should create a
@@ -50,14 +49,13 @@
 //! # use std::path::PathBuf;
 //! #
 //! # async fn get_token() -> Result<(), gcp_auth::Error> {
-//! use gcp_auth::{AuthenticationManager, CustomServiceAccount};
+//! use gcp_auth::{CustomServiceAccount, TokenProvider};
 //!
 //! // `credentials_path` variable is the path for the credentials `.json` file.
 //! let credentials_path = PathBuf::from("service-account.json");
 //! let service_account = CustomServiceAccount::from_file(credentials_path)?;
-//! let authentication_manager = AuthenticationManager::try_from(service_account)?;
 //! let scopes = &["https://www.googleapis.com/auth/cloud-platform"];
-//! let token = authentication_manager.get_token(scopes).await?;
+//! let token = service_account.token(scopes).await?;
 //! # Ok(())
 //! # }
 //! ```
@@ -68,17 +66,18 @@
 //! threads or async tasks.
 //!
 //! ```rust,no_run
-//! use gcp_auth::AuthenticationManager;
+//! use std::sync::Arc;
 //! use tokio::sync::OnceCell;
+//! use gcp_auth::TokenProvider;
 //!
-//! static AUTH_MANAGER: OnceCell<AuthenticationManager> = OnceCell::const_new();
+//! static TOKEN_PROVIDER: OnceCell<Arc<dyn TokenProvider>> = OnceCell::const_new();
 //!
-//! async fn authentication_manager() -> &'static AuthenticationManager {
-//!     AUTH_MANAGER
+//! async fn token_provider() -> &'static Arc<dyn TokenProvider> {
+//!     TOKEN_PROVIDER
 //!         .get_or_init(|| async {
-//!             AuthenticationManager::new()
+//!             gcp_auth::provider()
 //!                 .await
-//!                 .expect("unable to initialize authentication manager")
+//!                 .expect("unable to initialize token provider")
 //!         })
 //!         .await
 //! }
@@ -92,19 +91,77 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use tracing::{instrument, Level};
 
-mod authentication_manager;
 mod custom_service_account;
-mod default_authorized_user;
-mod default_service_account;
-mod error;
-mod gcloud_authorized_user;
-mod types;
-
-pub use authentication_manager::AuthenticationManager;
 pub use custom_service_account::CustomServiceAccount;
+
+mod default_authorized_user;
+use default_authorized_user::ConfigDefaultCredentials;
+
+mod default_service_account;
+use default_service_account::MetadataServiceAccount;
+
+mod error;
 pub use error::Error;
+
+mod gcloud_authorized_user;
+use gcloud_authorized_user::GCloudAuthorizedUser;
+
+mod types;
+use types::HttpClient;
 pub use types::{Signer, Token};
+
+/// Finds a service account provider to get authentication tokens from
+///
+/// Tries the following approaches, in order:
+///
+/// 1. Check if the `GOOGLE_APPLICATION_CREDENTIALS` environment variable if set;
+///    if so, use a custom service account as the token source.
+/// 2. Look for credentials in `.config/gcloud/application_default_credentials.json`;
+///    if found, use these credentials to request refresh tokens.
+/// 3. Send a HTTP request to the internal metadata server to retrieve a token;
+///    if it succeeds, use the default service account as the token source.
+/// 4. Check if the `gcloud` tool is available on the `PATH`; if so, use the
+///    `gcloud auth print-access-token` command as the token source.
+#[instrument(level = Level::DEBUG)]
+pub async fn provider() -> Result<Arc<dyn TokenProvider>, Error> {
+    tracing::debug!("Initializing gcp_auth");
+    if let Some(provider) = CustomServiceAccount::from_env()? {
+        return Ok(Arc::new(provider));
+    }
+
+    let client = HttpClient::new()?;
+    let default_user_error = match ConfigDefaultCredentials::new(&client).await {
+        Ok(provider) => {
+            tracing::debug!("Using ConfigDefaultCredentials");
+            return Ok(Arc::new(provider));
+        }
+        Err(e) => e,
+    };
+
+    let default_service_error = match MetadataServiceAccount::new(&client).await {
+        Ok(provider) => {
+            tracing::debug!("Using MetadataServiceAccount");
+            return Ok(Arc::new(provider));
+        }
+        Err(e) => e,
+    };
+
+    let gcloud_error = match GCloudAuthorizedUser::new().await {
+        Ok(provider) => {
+            tracing::debug!("Using GCloudAuthorizedUser");
+            return Ok(Arc::new(provider));
+        }
+        Err(e) => e,
+    };
+
+    Err(Error::NoAuthMethod(
+        Box::new(gcloud_error),
+        Box::new(default_service_error),
+        Box::new(default_user_error),
+    ))
+}
 
 /// A trait for an authentication context that can provide tokens
 #[async_trait]
