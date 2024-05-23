@@ -16,9 +16,8 @@ use tokio::sync::RwLock;
 use tracing::{instrument, Level};
 use url::form_urlencoded;
 
-use crate::error::Error;
 use crate::types::{HttpClient, Signer, Token};
-use crate::TokenProvider;
+use crate::{Error, TokenProvider};
 
 /// A custom service account containing credentials
 ///

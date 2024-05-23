@@ -7,9 +7,8 @@ use hyper::{Method, Request};
 use tokio::sync::RwLock;
 use tracing::{instrument, Level};
 
-use crate::TokenProvider;
-use crate::error::Error;
 use crate::types::{HttpClient, Token};
+use crate::{Error, TokenProvider};
 
 #[derive(Debug)]
 pub(crate) struct MetadataServiceAccount {

@@ -7,10 +7,9 @@ use async_trait::async_trait;
 use tokio::sync::RwLock;
 use which::which;
 
-use crate::error::Error;
-use crate::error::Error::{GCloudError, GCloudNotFound, GCloudParseError};
 use crate::types::Token;
-use crate::TokenProvider;
+use crate::Error::{GCloudError, GCloudNotFound, GCloudParseError};
+use crate::{Error, TokenProvider};
 
 #[derive(Debug)]
 pub(crate) struct GCloudAuthorizedUser {
