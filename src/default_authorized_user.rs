@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use tracing::{instrument, Level};
 
-use crate::authentication_manager::ServiceAccount;
+use crate::authentication_manager::TokenProvider;
 use crate::error::Error;
 use crate::types::{HttpClient, Token};
 
@@ -64,7 +64,7 @@ impl ConfigDefaultCredentials {
 }
 
 #[async_trait]
-impl ServiceAccount for ConfigDefaultCredentials {
+impl TokenProvider for ConfigDefaultCredentials {
     async fn token(&self, _scopes: &[&str]) -> Result<Arc<Token>, Error> {
         let token = self.token.read().await.clone();
         if !token.has_expired() {

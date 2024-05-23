@@ -11,7 +11,7 @@ use crate::gcloud_authorized_user::GCloudAuthorizedUser;
 use crate::types::{HttpClient, Token};
 
 #[async_trait]
-pub(crate) trait ServiceAccount: Send + Sync {
+pub(crate) trait TokenProvider: Send + Sync {
     async fn token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error>;
     async fn project_id(&self) -> Result<Arc<str>, Error>;
 }
@@ -23,7 +23,7 @@ pub(crate) trait ServiceAccount: Send + Sync {
 /// a [`CustomServiceAccount`], then converting it into an `AuthenticationManager` using the `From`
 /// impl.
 pub struct AuthenticationManager {
-    pub(crate) service_account: Box<dyn ServiceAccount>,
+    pub(crate) service_account: Box<dyn TokenProvider>,
 }
 
 impl AuthenticationManager {
@@ -78,7 +78,7 @@ impl AuthenticationManager {
         ))
     }
 
-    fn build(service_account: impl ServiceAccount + 'static) -> Self {
+    fn build(service_account: impl TokenProvider + 'static) -> Self {
         Self {
             service_account: Box::new(service_account),
         }
