@@ -7,7 +7,7 @@ use hyper::{Method, Request};
 use tokio::sync::RwLock;
 use tracing::{instrument, Level};
 
-use crate::authentication_manager::ServiceAccount;
+use crate::authentication_manager::TokenProvider;
 use crate::error::Error;
 use crate::types::{HttpClient, Token};
 
@@ -58,7 +58,7 @@ impl MetadataServiceAccount {
 }
 
 #[async_trait]
-impl ServiceAccount for MetadataServiceAccount {
+impl TokenProvider for MetadataServiceAccount {
     async fn token(&self, _scopes: &[&str]) -> Result<Arc<Token>, Error> {
         let token = self.token.read().await.clone();
         if !token.has_expired() {

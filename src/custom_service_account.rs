@@ -16,7 +16,7 @@ use tokio::sync::RwLock;
 use tracing::{instrument, Level};
 use url::form_urlencoded;
 
-use crate::authentication_manager::ServiceAccount;
+use crate::authentication_manager::TokenProvider;
 use crate::error::Error;
 use crate::types::{HttpClient, Signer, Token};
 
@@ -110,7 +110,7 @@ impl CustomServiceAccount {
 }
 
 #[async_trait]
-impl ServiceAccount for CustomServiceAccount {
+impl TokenProvider for CustomServiceAccount {
     async fn token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error> {
         let key: Vec<_> = scopes.iter().map(|x| x.to_string()).collect();
         let token = self.tokens.read().await.get(&key).cloned();

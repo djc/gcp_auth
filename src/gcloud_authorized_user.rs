@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use tokio::sync::RwLock;
 use which::which;
 
-use crate::authentication_manager::ServiceAccount;
+use crate::authentication_manager::TokenProvider;
 use crate::error::Error;
 use crate::error::Error::{GCloudError, GCloudNotFound, GCloudParseError};
 use crate::Token;
@@ -40,7 +40,7 @@ impl GCloudAuthorizedUser {
 }
 
 #[async_trait]
-impl ServiceAccount for GCloudAuthorizedUser {
+impl TokenProvider for GCloudAuthorizedUser {
     async fn token(&self, _scopes: &[&str]) -> Result<Arc<Token>, Error> {
         let token = self.token.read().await.clone();
         if !token.has_expired() {
