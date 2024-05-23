@@ -10,11 +10,11 @@ use tracing::{instrument, Level};
 
 use crate::authentication_manager::ServiceAccount;
 use crate::error::Error;
-use crate::types::{HyperClient, Token, HyperExt};
+use crate::types::{HttpClient, HyperExt, Token};
 
 #[derive(Debug)]
 pub(crate) struct ConfigDefaultCredentials {
-    client: HyperClient,
+    client: HttpClient,
     token: RwLock<Arc<Token>>,
     credentials: UserCredentials,
 }
@@ -24,7 +24,7 @@ impl ConfigDefaultCredentials {
     const USER_CREDENTIALS_PATH: &'static str =
         ".config/gcloud/application_default_credentials.json";
 
-    pub(crate) async fn new(client: &HyperClient) -> Result<Self, Error> {
+    pub(crate) async fn new(client: &HttpClient) -> Result<Self, Error> {
         tracing::debug!("Loading user credentials file");
         let mut home = home::home_dir().ok_or(Error::NoHomeDir)?;
         home.push(Self::USER_CREDENTIALS_PATH);
@@ -50,7 +50,7 @@ impl ConfigDefaultCredentials {
     }
 
     #[instrument(level = Level::DEBUG)]
-    async fn get_token(cred: &UserCredentials, client: &HyperClient) -> Result<Arc<Token>, Error> {
+    async fn get_token(cred: &UserCredentials, client: &HttpClient) -> Result<Arc<Token>, Error> {
         let mut retries = 0;
         let response = loop {
             let req = Self::build_token_request(&RefreshRequest {

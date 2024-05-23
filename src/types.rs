@@ -133,16 +133,16 @@ where
     Ok(Utc::now() + Duration::from_secs(seconds_from_now))
 }
 
-pub(crate) fn client() -> Result<HyperClient, Error> {
-    HyperClient::new()
+pub(crate) fn client() -> Result<HttpClient, Error> {
+    HttpClient::new()
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct HyperClient {
+pub(crate) struct HttpClient {
     inner: hyper::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>>,
 }
 
-impl HyperClient {
+impl HttpClient {
     pub(crate) fn new() -> Result<Self, Error> {
         #[cfg(feature = "webpki-roots")]
         let https = HttpsConnectorBuilder::new().with_webpki_roots();

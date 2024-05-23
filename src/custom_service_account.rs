@@ -13,7 +13,7 @@ use tracing::{instrument, Level};
 
 use crate::authentication_manager::ServiceAccount;
 use crate::error::Error;
-use crate::types::{self, HyperClient, HyperExt, Signer, Token};
+use crate::types::{self, HttpClient, HyperExt, Signer, Token};
 
 /// A custom service account containing credentials
 ///
@@ -23,7 +23,7 @@ use crate::types::{self, HyperClient, HyperExt, Signer, Token};
 /// [`AuthenticationManager`]: crate::AuthenticationManager
 #[derive(Debug)]
 pub struct CustomServiceAccount {
-    client: HyperClient,
+    client: HttpClient,
     credentials: ApplicationCredentials,
     signer: Signer,
     tokens: RwLock<HashMap<Vec<String>, Arc<Token>>>,
@@ -55,7 +55,7 @@ impl CustomServiceAccount {
         self
     }
 
-    fn new(credentials: ApplicationCredentials, client: HyperClient) -> Result<Self, Error> {
+    fn new(credentials: ApplicationCredentials, client: HttpClient) -> Result<Self, Error> {
         Ok(Self {
             client,
             signer: Signer::new(&credentials.private_key)?,
