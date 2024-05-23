@@ -9,9 +9,8 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use tracing::{instrument, Level};
 
-use crate::error::Error;
 use crate::types::{HttpClient, Token};
-use crate::TokenProvider;
+use crate::{Error, TokenProvider};
 
 #[derive(Debug)]
 pub(crate) struct ConfigDefaultCredentials {
