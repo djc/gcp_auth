@@ -70,6 +70,7 @@ impl CustomServiceAccount {
         })
     }
 
+    #[instrument(level = Level::DEBUG)]
     async fn fetch_token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error> {
         let jwt =
             Claims::new(&self.credentials, scopes, self.subject.as_deref()).to_jwt(&self.signer)?;
@@ -110,9 +111,24 @@ impl CustomServiceAccount {
 
 #[async_trait]
 impl ServiceAccount for CustomServiceAccount {
-    async fn token(&self, scopes: &[&str]) -> Option<Arc<Token>> {
+    async fn token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error> {
         let key: Vec<_> = scopes.iter().map(|x| x.to_string()).collect();
-        self.tokens.read().await.get(&key).cloned()
+        let token = self.tokens.read().await.get(&key).cloned();
+        if let Some(token) = token {
+            if !token.has_expired() {
+                return Ok(token.clone());
+            }
+
+            let mut locked = self.tokens.write().await;
+            let token = self.fetch_token(scopes).await?;
+            locked.insert(key, token.clone());
+            return Ok(token);
+        }
+
+        let mut locked = self.tokens.write().await;
+        let token = self.fetch_token(scopes).await?;
+        locked.insert(key, token.clone());
+        return Ok(token);
     }
 
     async fn project_id(&self) -> Result<Arc<str>, Error> {
@@ -120,15 +136,6 @@ impl ServiceAccount for CustomServiceAccount {
             Some(pid) => Ok(pid.clone()),
             None => Err(Error::ProjectIdNotFound),
         }
-    }
-
-    #[instrument(level = Level::DEBUG)]
-    async fn refresh_token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error> {
-        let mut locked = self.tokens.write().await;
-        let token = self.fetch_token(scopes).await?;
-        let key = scopes.iter().map(|x| (*x).to_string()).collect();
-        locked.insert(key, token.clone());
-        Ok(token)
     }
 }
 

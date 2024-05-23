@@ -12,9 +12,8 @@ use crate::types::{HttpClient, Token};
 
 #[async_trait]
 pub(crate) trait ServiceAccount: Send + Sync {
-    async fn token(&self, scopes: &[&str]) -> Option<Arc<Token>>;
+    async fn token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error>;
     async fn project_id(&self) -> Result<Arc<str>, Error>;
-    async fn refresh_token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error>;
 }
 
 /// Authentication manager is responsible for caching and obtaining credentials for the required
@@ -89,11 +88,7 @@ impl AuthenticationManager {
     ///
     /// Token can be used in the request authorization header in format "Bearer {token}"
     pub async fn get_token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error> {
-        let token = self.service_account.token(scopes).await;
-        match token.filter(|token| !token.has_expired()) {
-            Some(token) => Ok(token),
-            None => self.service_account.refresh_token(scopes).await,
-        }
+        self.service_account.token(scopes).await
     }
 
     /// Request the project ID for the authenticating account
