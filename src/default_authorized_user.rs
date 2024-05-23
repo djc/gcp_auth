@@ -21,14 +21,10 @@ pub(crate) struct ConfigDefaultCredentials {
 }
 
 impl ConfigDefaultCredentials {
-    const DEFAULT_TOKEN_GCP_URI: &'static str = "https://accounts.google.com/o/oauth2/token";
-    const USER_CREDENTIALS_PATH: &'static str =
-        ".config/gcloud/application_default_credentials.json";
-
     pub(crate) async fn new(client: &HttpClient) -> Result<Self, Error> {
         tracing::debug!("Loading user credentials file");
         let mut home = home::home_dir().ok_or(Error::NoHomeDir)?;
-        home.push(Self::USER_CREDENTIALS_PATH);
+        home.push(USER_CREDENTIALS_PATH);
 
         let file = fs::File::open(home).map_err(Error::UserProfilePath)?;
         let credentials = serde_json::from_reader::<_, UserCredentials>(file)
@@ -48,7 +44,7 @@ impl ConfigDefaultCredentials {
                 &|| {
                     Request::builder()
                         .method(Method::POST)
-                        .uri(Self::DEFAULT_TOKEN_GCP_URI)
+                        .uri(DEFAULT_TOKEN_GCP_URI)
                         .header(CONTENT_TYPE, "application/json")
                         .body(Body::from(
                             serde_json::to_string(&RefreshRequest {
@@ -108,3 +104,6 @@ struct UserCredentials {
     /// Type
     pub(crate) r#type: String,
 }
+
+const DEFAULT_TOKEN_GCP_URI: &str = "https://accounts.google.com/o/oauth2/token";
+const USER_CREDENTIALS_PATH: &str = ".config/gcloud/application_default_credentials.json";

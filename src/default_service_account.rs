@@ -17,11 +17,6 @@ pub(crate) struct MetadataServiceAccount {
 }
 
 impl MetadataServiceAccount {
-    // https://cloud.google.com/compute/docs/metadata/predefined-metadata-keys
-    const DEFAULT_PROJECT_ID_GCP_URI: &'static str =
-        "http://metadata.google.internal/computeMetadata/v1/project/project-id";
-    const DEFAULT_TOKEN_GCP_URI: &'static str = "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token";
-
     pub(crate) async fn new(client: &HttpClient) -> Result<Self, Error> {
         let token = RwLock::new(Self::get_token(client).await?);
         Ok(Self {
@@ -34,7 +29,7 @@ impl MetadataServiceAccount {
     async fn get_token(client: &HttpClient) -> Result<Arc<Token>, Error> {
         client
             .token(
-                &|| metadata_request(Self::DEFAULT_TOKEN_GCP_URI),
+                &|| metadata_request(DEFAULT_TOKEN_GCP_URI),
                 "ConfigDefaultCredentials",
             )
             .await
@@ -45,7 +40,7 @@ impl MetadataServiceAccount {
 impl ServiceAccount for MetadataServiceAccount {
     async fn project_id(&self) -> Result<Arc<str>, Error> {
         tracing::debug!("Getting project ID from GCP instance metadata server");
-        let req = metadata_request(Self::DEFAULT_PROJECT_ID_GCP_URI);
+        let req = metadata_request(DEFAULT_PROJECT_ID_GCP_URI);
         let rsp = self
             .client
             .request(req)
@@ -81,3 +76,9 @@ fn metadata_request(uri: &str) -> Request<Body> {
         .body(Body::empty())
         .unwrap()
 }
+
+// https://cloud.google.com/compute/docs/metadata/predefined-metadata-keys
+const DEFAULT_PROJECT_ID_GCP_URI: &str =
+    "http://metadata.google.internal/computeMetadata/v1/project/project-id";
+const DEFAULT_TOKEN_GCP_URI: &str =
+    "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token";
