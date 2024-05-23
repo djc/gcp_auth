@@ -1,9 +1,10 @@
 use std::str;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use async_trait::async_trait;
 use hyper::body::Body;
 use hyper::{Method, Request};
+use tokio::sync::RwLock;
 use tracing::{instrument, Level};
 
 use crate::authentication_manager::ServiceAccount;
@@ -39,7 +40,7 @@ impl MetadataServiceAccount {
 #[async_trait]
 impl ServiceAccount for MetadataServiceAccount {
     async fn token(&self, _scopes: &[&str]) -> Option<Arc<Token>> {
-        Some(self.token.read().unwrap().clone())
+        Some(self.token.read().await.clone())
     }
 
     async fn project_id(&self) -> Result<Arc<str>, Error> {
@@ -62,8 +63,9 @@ impl ServiceAccount for MetadataServiceAccount {
     }
 
     async fn refresh_token(&self, _scopes: &[&str]) -> Result<Arc<Token>, Error> {
+        let mut locked = self.token.write().await;
         let token = Self::get_token(&self.client).await?;
-        *self.token.write().unwrap() = token.clone();
+        *locked = token.clone();
         Ok(token)
     }
 }

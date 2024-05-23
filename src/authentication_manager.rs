@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use tokio::sync::Mutex;
 use tracing::{instrument, Level};
 
 use crate::custom_service_account::CustomServiceAccount;
@@ -26,7 +25,6 @@ pub(crate) trait ServiceAccount: Send + Sync {
 /// impl.
 pub struct AuthenticationManager {
     pub(crate) service_account: Box<dyn ServiceAccount>,
-    refresh_mutex: Mutex<()>,
 }
 
 impl AuthenticationManager {
@@ -84,7 +82,6 @@ impl AuthenticationManager {
     fn build(service_account: impl ServiceAccount + 'static) -> Self {
         Self {
             service_account: Box::new(service_account),
-            refresh_mutex: Mutex::new(()),
         }
     }
 
@@ -93,19 +90,10 @@ impl AuthenticationManager {
     /// Token can be used in the request authorization header in format "Bearer {token}"
     pub async fn get_token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error> {
         let token = self.service_account.token(scopes).await;
-        if let Some(token) = token.filter(|token| !token.has_expired()) {
-            return Ok(token);
+        match token.filter(|token| !token.has_expired()) {
+            Some(token) => Ok(token),
+            None => self.service_account.refresh_token(scopes).await,
         }
-
-        let _guard = self.refresh_mutex.lock().await;
-
-        // Check if refresh happened while we were waiting.
-        let token = self.service_account.token(scopes).await;
-        if let Some(token) = token.filter(|token| !token.has_expired()) {
-            return Ok(token);
-        }
-
-        self.service_account.refresh_token(scopes).await
     }
 
     /// Request the project ID for the authenticating account
