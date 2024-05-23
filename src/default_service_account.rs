@@ -38,6 +38,10 @@ impl MetadataServiceAccount {
 
 #[async_trait]
 impl ServiceAccount for MetadataServiceAccount {
+    async fn token(&self, _scopes: &[&str]) -> Option<Arc<Token>> {
+        Some(self.token.read().unwrap().clone())
+    }
+
     async fn project_id(&self) -> Result<Arc<str>, Error> {
         tracing::debug!("Getting project ID from GCP instance metadata server");
         let req = metadata_request(DEFAULT_PROJECT_ID_GCP_URI);
@@ -55,10 +59,6 @@ impl ServiceAccount for MetadataServiceAccount {
             Ok(s) => Ok(Arc::from(s)),
             Err(_) => Err(Error::ProjectIdNonUtf8),
         }
-    }
-
-    async fn get_token(&self, _scopes: &[&str]) -> Option<Arc<Token>> {
-        Some(self.token.read().unwrap().clone())
     }
 
     async fn refresh_token(&self, _scopes: &[&str]) -> Result<Arc<Token>, Error> {
