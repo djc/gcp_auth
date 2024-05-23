@@ -1,9 +1,9 @@
 use std::collections::HashMap;
-use std::fmt;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
+use std::{env, fmt};
 
 use async_trait::async_trait;
 use base64::{engine::general_purpose::URL_SAFE, Engine};
@@ -33,13 +33,8 @@ pub struct CustomServiceAccount {
 impl CustomServiceAccount {
     /// Check `GOOGLE_APPLICATION_CREDENTIALS` environment variable for a path to JSON credentials
     pub fn from_env() -> Result<Option<Self>, Error> {
-        std::env::var_os("GOOGLE_APPLICATION_CREDENTIALS")
-            .map(|path| {
-                tracing::debug!(
-                    "Reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var"
-                );
-                Self::from_file(PathBuf::from(path))
-            })
+        ApplicationCredentials::from_env()?
+            .map(Self::new)
             .transpose()
     }
 
@@ -219,6 +214,17 @@ pub(crate) struct ApplicationCredentials {
 }
 
 impl ApplicationCredentials {
+    fn from_env() -> Result<Option<Self>, Error> {
+        env::var_os("GOOGLE_APPLICATION_CREDENTIALS")
+            .map(|path| {
+                tracing::debug!(
+                    "Reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var"
+                );
+                Self::from_file(PathBuf::from(path))
+            })
+            .transpose()
+    }
+
     fn from_file(path: impl AsRef<Path>) -> Result<Self, Error> {
         let file = File::open(path.as_ref()).map_err(Error::CustomServiceAccountPath)?;
         serde_json::from_reader::<_, ApplicationCredentials>(file)
