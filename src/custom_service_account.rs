@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fmt;
+use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
@@ -44,11 +45,7 @@ impl CustomServiceAccount {
 
     /// Read service account credentials from the given JSON file
     pub fn from_file<T: AsRef<Path>>(path: T) -> Result<Self, Error> {
-        let file = std::fs::File::open(path.as_ref()).map_err(Error::CustomServiceAccountPath)?;
-        match serde_json::from_reader::<_, ApplicationCredentials>(file) {
-            Ok(credentials) => Self::new(credentials),
-            Err(e) => Err(Error::CustomServiceAccountCredentials(e)),
-        }
+        Self::new(ApplicationCredentials::from_file(path)?)
     }
 
     /// Read service account credentials from the given JSON string
@@ -219,6 +216,14 @@ pub(crate) struct ApplicationCredentials {
     pub(crate) auth_provider_x509_cert_url: Option<String>,
     /// client_x509_cert_url
     pub(crate) client_x509_cert_url: Option<String>,
+}
+
+impl ApplicationCredentials {
+    fn from_file(path: impl AsRef<Path>) -> Result<Self, Error> {
+        let file = File::open(path.as_ref()).map_err(Error::CustomServiceAccountPath)?;
+        serde_json::from_reader::<_, ApplicationCredentials>(file)
+            .map_err(Error::CustomServiceAccountCredentials)
+    }
 }
 
 impl FromStr for ApplicationCredentials {
