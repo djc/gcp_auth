@@ -65,8 +65,16 @@ impl ConfigDefaultCredentials {
 
 #[async_trait]
 impl ServiceAccount for ConfigDefaultCredentials {
-    async fn token(&self, _scopes: &[&str]) -> Option<Arc<Token>> {
-        Some(self.token.read().await.clone())
+    async fn token(&self, _scopes: &[&str]) -> Result<Arc<Token>, Error> {
+        let token = self.token.read().await.clone();
+        if !token.has_expired() {
+            return Ok(token);
+        }
+
+        let mut locked = self.token.write().await;
+        let token = Self::get_token(&self.credentials, &self.client).await?;
+        *locked = token.clone();
+        Ok(token)
     }
 
     async fn project_id(&self) -> Result<Arc<str>, Error> {
@@ -74,13 +82,6 @@ impl ServiceAccount for ConfigDefaultCredentials {
             .quota_project_id
             .clone()
             .ok_or(Error::NoProjectId)
-    }
-
-    async fn refresh_token(&self, _scopes: &[&str]) -> Result<Arc<Token>, Error> {
-        let mut locked = self.token.write().await;
-        let token = Self::get_token(&self.credentials, &self.client).await?;
-        *locked = token.clone();
-        Ok(token)
     }
 }
 

@@ -39,8 +39,16 @@ impl MetadataServiceAccount {
 
 #[async_trait]
 impl ServiceAccount for MetadataServiceAccount {
-    async fn token(&self, _scopes: &[&str]) -> Option<Arc<Token>> {
-        Some(self.token.read().await.clone())
+    async fn token(&self, _scopes: &[&str]) -> Result<Arc<Token>, Error> {
+        let token = self.token.read().await.clone();
+        if !token.has_expired() {
+            return Ok(token);
+        }
+
+        let mut locked = self.token.write().await;
+        let token = Self::get_token(&self.client).await?;
+        *locked = token.clone();
+        Ok(token)
     }
 
     async fn project_id(&self) -> Result<Arc<str>, Error> {
@@ -60,13 +68,6 @@ impl ServiceAccount for MetadataServiceAccount {
             Ok(s) => Ok(Arc::from(s)),
             Err(_) => Err(Error::ProjectIdNonUtf8),
         }
-    }
-
-    async fn refresh_token(&self, _scopes: &[&str]) -> Result<Arc<Token>, Error> {
-        let mut locked = self.token.write().await;
-        let token = Self::get_token(&self.client).await?;
-        *locked = token.clone();
-        Ok(token)
     }
 }
 
