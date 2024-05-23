@@ -3,6 +3,7 @@ use std::time::Duration;
 use std::{fmt, io};
 
 use chrono::{DateTime, Utc};
+use hyper::body::Bytes;
 use hyper::Client;
 use hyper_rustls::HttpsConnectorBuilder;
 use ring::rand::SystemRandom;
@@ -31,8 +32,40 @@ impl HttpClient {
 
     pub(crate) async fn token(
         &self,
-        req: hyper::Request<hyper::Body>,
+        request: &impl Fn() -> hyper::Request<hyper::Body>,
+        provider: &'static str,
     ) -> Result<Arc<Token>, Error> {
+        let mut retries = 0;
+        let body = loop {
+            let err = match self.try_token(request, provider).await {
+                // Early return when the request succeeds
+                Ok(body) => break body,
+                Err(err) => err,
+            };
+
+            tracing::warn!(
+                ?err,
+                provider,
+                retries,
+                "failed to refresh token, trying again..."
+            );
+
+            retries += 1;
+            if retries >= RETRY_COUNT {
+                return Err(err);
+            }
+        };
+
+        serde_json::from_slice(&body).map_err(Error::ParsingError)
+    }
+
+    async fn try_token(
+        &self,
+        request: &impl Fn() -> hyper::Request<hyper::Body>,
+        provider: &'static str,
+    ) -> Result<Bytes, Error> {
+        let req = request();
+        tracing::debug!(?req, provider, "requesting token");
         let (parts, body) = self.inner.request(req).await?.into_parts();
         let body = hyper::body::to_bytes(body)
             .await
@@ -48,7 +81,7 @@ impl HttpClient {
             return Err(Error::ServerUnavailable(error));
         }
 
-        serde_json::from_slice(&body).map_err(Error::ParsingError)
+        Ok(body)
     }
 
     pub(crate) async fn request(
@@ -180,6 +213,9 @@ where
     let seconds_from_now: u64 = Deserialize::deserialize(deserializer)?;
     Ok(Utc::now() + Duration::from_secs(seconds_from_now))
 }
+
+/// How many times to attempt to fetch a token from the set credentials token endpoint.
+const RETRY_COUNT: u8 = 5;
 
 #[cfg(test)]
 mod tests {

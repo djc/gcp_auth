@@ -4,6 +4,7 @@ use std::sync::RwLock;
 
 use async_trait::async_trait;
 use hyper::body::Body;
+use hyper::header::CONTENT_TYPE;
 use hyper::{Method, Request};
 use serde::{Deserialize, Serialize};
 use tracing::{instrument, Level};
@@ -40,40 +41,29 @@ impl ConfigDefaultCredentials {
         })
     }
 
-    fn build_token_request<T: serde::Serialize>(json: &T) -> Request<Body> {
-        Request::builder()
-            .method(Method::POST)
-            .uri(Self::DEFAULT_TOKEN_GCP_URI)
-            .header("content-type", "application/json")
-            .body(Body::from(serde_json::to_string(json).unwrap()))
-            .unwrap()
-    }
-
     #[instrument(level = Level::DEBUG)]
     async fn get_token(cred: &UserCredentials, client: &HttpClient) -> Result<Arc<Token>, Error> {
-        let mut retries = 0;
-        loop {
-            let req = Self::build_token_request(&RefreshRequest {
-                client_id: &cred.client_id,
-                client_secret: &cred.client_secret,
-                grant_type: "refresh_token",
-                refresh_token: &cred.refresh_token,
-            });
-
-            let err = match client.token(req).await {
-                // Early return when the request succeeds
-                Ok(token) => return Ok(token),
-                Err(err) => err,
-            };
-
-            tracing::warn!(
-                "Failed to get token from GCP oauth2 token endpoint: {err}, trying again..."
-            );
-            retries += 1;
-            if retries >= RETRY_COUNT {
-                return Err(err);
-            }
-        }
+        client
+            .token(
+                &|| {
+                    Request::builder()
+                        .method(Method::POST)
+                        .uri(Self::DEFAULT_TOKEN_GCP_URI)
+                        .header(CONTENT_TYPE, "application/json")
+                        .body(Body::from(
+                            serde_json::to_string(&RefreshRequest {
+                                client_id: &cred.client_id,
+                                client_secret: &cred.client_secret,
+                                grant_type: "refresh_token",
+                                refresh_token: &cred.refresh_token,
+                            })
+                            .unwrap(),
+                        ))
+                        .unwrap()
+                },
+                "ConfigDefaultCredentials",
+            )
+            .await
     }
 }
 
@@ -118,6 +108,3 @@ struct UserCredentials {
     /// Type
     pub(crate) r#type: String,
 }
-
-/// How many times to attempt to fetch a token from the GCP token endpoint.
-const RETRY_COUNT: u8 = 5;

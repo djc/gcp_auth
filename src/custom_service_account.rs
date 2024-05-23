@@ -8,6 +8,9 @@ use std::{env, fmt};
 use async_trait::async_trait;
 use base64::{engine::general_purpose::URL_SAFE, Engine};
 use chrono::Utc;
+use hyper::body::Body;
+use hyper::header::CONTENT_TYPE;
+use hyper::Request;
 use serde::{Deserialize, Serialize};
 use tracing::{instrument, Level};
 
@@ -97,37 +100,25 @@ impl ServiceAccount for CustomServiceAccount {
 
     #[instrument(level = Level::DEBUG)]
     async fn refresh_token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error> {
-        use hyper::header;
         use url::form_urlencoded;
 
         let jwt =
             Claims::new(&self.credentials, scopes, self.subject.as_deref()).to_jwt(&self.signer)?;
-        let rqbody = form_urlencoded::Serializer::new(String::new())
+        let body = form_urlencoded::Serializer::new(String::new())
             .extend_pairs(&[("grant_type", GRANT_TYPE), ("assertion", jwt.as_str())])
             .finish();
-
-        let mut retries = 0;
-        let token = loop {
-            let request = hyper::Request::post(&self.credentials.token_uri)
-                .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
-                .body(hyper::Body::from(rqbody.clone()))
-                .unwrap();
-
-            tracing::debug!("requesting token from service account: {request:?}");
-            let err = match self.client.token(request).await {
-                // Early return when the request succeeds
-                Ok(token) => break token,
-                Err(err) => err,
-            };
-
-            tracing::warn!(
-                "Failed to refresh token with GCP oauth2 token endpoint: {err}, trying again..."
-            );
-            retries += 1;
-            if retries >= RETRY_COUNT {
-                return Err(err);
-            }
-        };
+        let token = self
+            .client
+            .token(
+                &|| {
+                    Request::post(&self.credentials.token_uri)
+                        .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+                        .body(Body::from(body.clone()))
+                        .unwrap()
+                },
+                "CustomServiceAccount",
+            )
+            .await?;
 
         let key = scopes.iter().map(|x| (*x).to_string()).collect();
         self.tokens.write().unwrap().insert(key, token.clone());
@@ -248,6 +239,3 @@ impl fmt::Debug for ApplicationCredentials {
 
 pub(crate) const GRANT_TYPE: &str = "urn:ietf:params:oauth:grant-type:jwt-bearer";
 const GOOGLE_RS256_HEAD: &str = r#"{"alg":"RS256","typ":"JWT"}"#;
-
-/// How many times to attempt to fetch a token from the set credentials token endpoint.
-const RETRY_COUNT: u8 = 5;
