@@ -13,6 +13,7 @@ use hyper::header::CONTENT_TYPE;
 use hyper::Request;
 use serde::{Deserialize, Serialize};
 use tracing::{instrument, Level};
+use url::form_urlencoded;
 
 use crate::authentication_manager::ServiceAccount;
 use crate::error::Error;
@@ -100,8 +101,6 @@ impl ServiceAccount for CustomServiceAccount {
 
     #[instrument(level = Level::DEBUG)]
     async fn refresh_token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error> {
-        use url::form_urlencoded;
-
         let jwt =
             Claims::new(&self.credentials, scopes, self.subject.as_deref()).to_jwt(&self.signer)?;
         let body = form_urlencoded::Serializer::new(String::new())
