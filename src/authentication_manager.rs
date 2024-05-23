@@ -9,7 +9,7 @@ use crate::default_authorized_user::ConfigDefaultCredentials;
 use crate::default_service_account::MetadataServiceAccount;
 use crate::error::Error;
 use crate::gcloud_authorized_user::GCloudAuthorizedUser;
-use crate::types::{self, Token};
+use crate::types::{HttpClient, Token};
 
 #[async_trait]
 pub(crate) trait ServiceAccount: Send + Sync {
@@ -49,7 +49,7 @@ impl AuthenticationManager {
             return service_account.try_into();
         }
 
-        let client = types::client()?;
+        let client = HttpClient::new()?;
         let default_user_error = match ConfigDefaultCredentials::new(&client).await {
             Ok(service_account) => {
                 tracing::debug!("Using ConfigDefaultCredentials");

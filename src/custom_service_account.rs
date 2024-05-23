@@ -13,7 +13,7 @@ use tracing::{instrument, Level};
 
 use crate::authentication_manager::ServiceAccount;
 use crate::error::Error;
-use crate::types::{self, HttpClient, HyperExt, Signer, Token};
+use crate::types::{HttpClient, HyperExt, Signer, Token};
 
 /// A custom service account containing credentials
 ///
@@ -34,19 +34,19 @@ impl CustomServiceAccount {
     /// Check `GOOGLE_APPLICATION_CREDENTIALS` environment variable for a path to JSON credentials
     pub fn from_env() -> Result<Option<Self>, Error> {
         match ApplicationCredentials::from_env()? {
-            Some(credentials) => Self::new(credentials, types::client()?).map(Some),
+            Some(credentials) => Self::new(credentials, HttpClient::new()?).map(Some),
             None => Ok(None),
         }
     }
 
     /// Read service account credentials from the given JSON file
     pub fn from_file<T: AsRef<Path>>(path: T) -> Result<Self, Error> {
-        Self::new(ApplicationCredentials::from_file(path)?, types::client()?)
+        Self::new(ApplicationCredentials::from_file(path)?, HttpClient::new()?)
     }
 
     /// Read service account credentials from the given JSON string
     pub fn from_json(s: &str) -> Result<Self, Error> {
-        Self::new(ApplicationCredentials::from_str(s)?, types::client()?)
+        Self::new(ApplicationCredentials::from_str(s)?, HttpClient::new()?)
     }
 
     /// Set the `subject` to impersonate a user
