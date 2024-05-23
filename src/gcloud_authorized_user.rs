@@ -10,7 +10,6 @@ use which::which;
 use crate::authentication_manager::ServiceAccount;
 use crate::error::Error;
 use crate::error::Error::{GCloudError, GCloudNotFound, GCloudParseError};
-use crate::types::HyperClient;
 use crate::Token;
 
 /// The default number of seconds that it takes for a Google Cloud auth token to expire.
@@ -47,7 +46,7 @@ impl GCloudAuthorizedUser {
 
 #[async_trait]
 impl ServiceAccount for GCloudAuthorizedUser {
-    async fn project_id(&self, _: &HyperClient) -> Result<String, Error> {
+    async fn project_id(&self) -> Result<String, Error> {
         self.project_id.clone().ok_or(Error::NoProjectId)
     }
 
@@ -55,11 +54,7 @@ impl ServiceAccount for GCloudAuthorizedUser {
         Some(self.token.read().unwrap().clone())
     }
 
-    async fn refresh_token(
-        &self,
-        _client: &HyperClient,
-        _scopes: &[&str],
-    ) -> Result<Arc<Token>, Error> {
+    async fn refresh_token(&self, _scopes: &[&str]) -> Result<Arc<Token>, Error> {
         let token = Self::token(&self.gcloud)?;
         *self.token.write().unwrap() = token.clone();
         Ok(token)

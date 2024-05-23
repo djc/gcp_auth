@@ -9,13 +9,13 @@ use crate::default_authorized_user::ConfigDefaultCredentials;
 use crate::default_service_account::MetadataServiceAccount;
 use crate::error::Error;
 use crate::gcloud_authorized_user::GCloudAuthorizedUser;
-use crate::types::{self, HyperClient, Token};
+use crate::types::{self, Token};
 
 #[async_trait]
 pub(crate) trait ServiceAccount: Send + Sync {
-    async fn project_id(&self, client: &HyperClient) -> Result<String, Error>;
+    async fn project_id(&self) -> Result<String, Error>;
     fn get_token(&self, scopes: &[&str]) -> Option<Arc<Token>>;
-    async fn refresh_token(&self, client: &HyperClient, scopes: &[&str]) -> Result<Arc<Token>, Error>;
+    async fn refresh_token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error>;
 }
 
 /// Authentication manager is responsible for caching and obtaining credentials for the required
@@ -25,7 +25,6 @@ pub(crate) trait ServiceAccount: Send + Sync {
 /// a [`CustomServiceAccount`], then converting it into an `AuthenticationManager` using the `From`
 /// impl.
 pub struct AuthenticationManager {
-    pub(crate) client: HyperClient,
     pub(crate) service_account: Box<dyn ServiceAccount>,
     refresh_mutex: Mutex<()>,
 }
@@ -54,7 +53,7 @@ impl AuthenticationManager {
         let default_user_error = match ConfigDefaultCredentials::new(&client).await {
             Ok(service_account) => {
                 tracing::debug!("Using ConfigDefaultCredentials");
-                return Ok(Self::build(client, service_account));
+                return Ok(Self::build(service_account));
             }
             Err(e) => e,
         };
@@ -62,7 +61,7 @@ impl AuthenticationManager {
         let default_service_error = match MetadataServiceAccount::new(&client).await {
             Ok(service_account) => {
                 tracing::debug!("Using MetadataServiceAccount");
-                return Ok(Self::build(client, service_account));
+                return Ok(Self::build(service_account));
             }
             Err(e) => e,
         };
@@ -70,7 +69,7 @@ impl AuthenticationManager {
         let gcloud_error = match GCloudAuthorizedUser::new().await {
             Ok(service_account) => {
                 tracing::debug!("Using GCloudAuthorizedUser");
-                return Ok(Self::build(client, service_account));
+                return Ok(Self::build(service_account));
             }
             Err(e) => e,
         };
@@ -82,9 +81,8 @@ impl AuthenticationManager {
         ))
     }
 
-    fn build(client: HyperClient, service_account: impl ServiceAccount + 'static) -> Self {
+    fn build(service_account: impl ServiceAccount + 'static) -> Self {
         Self {
-            client,
             service_account: Box::new(service_account),
             refresh_mutex: Mutex::new(()),
         }
@@ -107,16 +105,14 @@ impl AuthenticationManager {
             return Ok(token);
         }
 
-        self.service_account
-            .refresh_token(&self.client, scopes)
-            .await
+        self.service_account.refresh_token(scopes).await
     }
 
     /// Request the project ID for the authenticating account
     ///
     /// This is only available for service account-based authentication methods.
     pub async fn project_id(&self) -> Result<String, Error> {
-        self.service_account.project_id(&self.client).await
+        self.service_account.project_id().await
     }
 }
 
@@ -124,6 +120,6 @@ impl TryFrom<CustomServiceAccount> for AuthenticationManager {
     type Error = Error;
 
     fn try_from(service_account: CustomServiceAccount) -> Result<Self, Self::Error> {
-        Ok(Self::build(types::client()?, service_account))
+        Ok(Self::build(service_account))
     }
 }
