@@ -15,6 +15,7 @@ use crate::util::HyperExt;
 
 #[derive(Debug)]
 pub(crate) struct ConfigDefaultCredentials {
+    client: HyperClient,
     token: RwLock<Arc<Token>>,
     credentials: UserCredentials,
 }
@@ -34,6 +35,7 @@ impl ConfigDefaultCredentials {
             .map_err(Error::UserProfileFormat)?;
 
         Ok(Self {
+            client: client.clone(),
             token: RwLock::new(Self::get_token(&credentials, client).await?),
             credentials,
         })
@@ -80,7 +82,7 @@ impl ConfigDefaultCredentials {
 
 #[async_trait]
 impl ServiceAccount for ConfigDefaultCredentials {
-    async fn project_id(&self, _: &HyperClient) -> Result<String, Error> {
+    async fn project_id(&self) -> Result<String, Error> {
         self.credentials
             .quota_project_id
             .clone()
@@ -91,12 +93,8 @@ impl ServiceAccount for ConfigDefaultCredentials {
         Some(self.token.read().unwrap().clone())
     }
 
-    async fn refresh_token(
-        &self,
-        client: &HyperClient,
-        _scopes: &[&str],
-    ) -> Result<Arc<Token>, Error> {
-        let token = Self::get_token(&self.credentials, client).await?;
+    async fn refresh_token(&self, _scopes: &[&str]) -> Result<Arc<Token>, Error> {
+        let token = Self::get_token(&self.credentials, &self.client).await?;
         *self.token.write().unwrap() = token.clone();
         Ok(token)
     }

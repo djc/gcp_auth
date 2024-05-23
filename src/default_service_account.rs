@@ -13,6 +13,7 @@ use crate::util::HyperExt;
 
 #[derive(Debug)]
 pub(crate) struct MetadataServiceAccount {
+    client: HyperClient,
     token: RwLock<Arc<Token>>,
 }
 
@@ -24,7 +25,10 @@ impl MetadataServiceAccount {
 
     pub(crate) async fn new(client: &HyperClient) -> Result<Self, Error> {
         let token = RwLock::new(Self::get_token(client).await?);
-        Ok(Self { token })
+        Ok(Self {
+            client: client.clone(),
+            token,
+        })
     }
 
     fn build_token_request(uri: &str) -> Request<Body> {
@@ -67,10 +71,14 @@ impl MetadataServiceAccount {
 
 #[async_trait]
 impl ServiceAccount for MetadataServiceAccount {
-    async fn project_id(&self, client: &HyperClient) -> Result<String, Error> {
+    async fn project_id(&self) -> Result<String, Error> {
         tracing::debug!("Getting project ID from GCP instance metadata server");
         let req = Self::build_token_request(Self::DEFAULT_PROJECT_ID_GCP_URI);
-        let rsp = client.request(req).await.map_err(Error::ConnectionError)?;
+        let rsp = self
+            .client
+            .request(req)
+            .await
+            .map_err(Error::ConnectionError)?;
 
         let (_, body) = rsp.into_parts();
         let body = hyper::body::to_bytes(body)
@@ -86,12 +94,8 @@ impl ServiceAccount for MetadataServiceAccount {
         Some(self.token.read().unwrap().clone())
     }
 
-    async fn refresh_token(
-        &self,
-        client: &HyperClient,
-        _scopes: &[&str],
-    ) -> Result<Arc<Token>, Error> {
-        let token = Self::get_token(client).await?;
+    async fn refresh_token(&self, _scopes: &[&str]) -> Result<Arc<Token>, Error> {
+        let token = Self::get_token(&self.client).await?;
         *self.token.write().unwrap() = token.clone();
         Ok(token)
     }

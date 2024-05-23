@@ -13,7 +13,7 @@ use tracing::{instrument, Level};
 
 use crate::authentication_manager::ServiceAccount;
 use crate::error::Error;
-use crate::types::{HyperClient, Signer, Token};
+use crate::types::{self, HyperClient, Signer, Token};
 use crate::util::HyperExt;
 
 /// A custom service account containing credentials
@@ -24,6 +24,7 @@ use crate::util::HyperExt;
 /// [`AuthenticationManager`]: crate::AuthenticationManager
 #[derive(Debug)]
 pub struct CustomServiceAccount {
+    client: HyperClient,
     credentials: ApplicationCredentials,
     signer: Signer,
     tokens: RwLock<HashMap<Vec<String>, Arc<Token>>>,
@@ -33,19 +34,20 @@ pub struct CustomServiceAccount {
 impl CustomServiceAccount {
     /// Check `GOOGLE_APPLICATION_CREDENTIALS` environment variable for a path to JSON credentials
     pub fn from_env() -> Result<Option<Self>, Error> {
-        ApplicationCredentials::from_env()?
-            .map(Self::new)
-            .transpose()
+        match ApplicationCredentials::from_env()? {
+            Some(credentials) => Self::new(credentials, types::client()?).map(Some),
+            None => Ok(None),
+        }
     }
 
     /// Read service account credentials from the given JSON file
     pub fn from_file<T: AsRef<Path>>(path: T) -> Result<Self, Error> {
-        Self::new(ApplicationCredentials::from_file(path)?)
+        Self::new(ApplicationCredentials::from_file(path)?, types::client()?)
     }
 
     /// Read service account credentials from the given JSON string
     pub fn from_json(s: &str) -> Result<Self, Error> {
-        Self::new(ApplicationCredentials::from_str(s)?)
+        Self::new(ApplicationCredentials::from_str(s)?, types::client()?)
     }
 
     /// Set the `subject` to impersonate a user
@@ -54,8 +56,9 @@ impl CustomServiceAccount {
         self
     }
 
-    fn new(credentials: ApplicationCredentials) -> Result<Self, Error> {
+    fn new(credentials: ApplicationCredentials, client: HyperClient) -> Result<Self, Error> {
         Ok(Self {
+            client,
             signer: Signer::new(&credentials.private_key)?,
             credentials,
             tokens: RwLock::new(HashMap::new()),
@@ -81,7 +84,7 @@ impl CustomServiceAccount {
 
 #[async_trait]
 impl ServiceAccount for CustomServiceAccount {
-    async fn project_id(&self, _: &HyperClient) -> Result<String, Error> {
+    async fn project_id(&self) -> Result<String, Error> {
         match &self.credentials.project_id {
             Some(pid) => Ok(pid.clone()),
             None => Err(Error::ProjectIdNotFound),
@@ -94,11 +97,7 @@ impl ServiceAccount for CustomServiceAccount {
     }
 
     #[instrument(level = Level::DEBUG)]
-    async fn refresh_token(
-        &self,
-        client: &HyperClient,
-        scopes: &[&str],
-    ) -> Result<Arc<Token>, Error> {
+    async fn refresh_token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error> {
         use hyper::header;
         use url::form_urlencoded;
 
@@ -116,7 +115,7 @@ impl ServiceAccount for CustomServiceAccount {
                 .unwrap();
 
             tracing::debug!("requesting token from service account: {request:?}");
-            let err = match client.request(request).await {
+            let err = match self.client.request(request).await {
                 // Early return when the request succeeds
                 Ok(response) => break response,
                 Err(err) => err,
