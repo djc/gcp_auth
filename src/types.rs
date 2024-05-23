@@ -3,8 +3,8 @@ use std::time::Duration;
 use std::{fmt, io};
 
 use chrono::{DateTime, Utc};
-use hyper::body::Bytes;
-use hyper::Client;
+use hyper::body::{Body, Bytes};
+use hyper::{Client, Request, Response};
 use hyper_rustls::HttpsConnectorBuilder;
 use ring::rand::SystemRandom;
 use ring::signature::{RsaKeyPair, RSA_PKCS1_SHA256};
@@ -14,7 +14,7 @@ use crate::Error;
 
 #[derive(Clone, Debug)]
 pub(crate) struct HttpClient {
-    inner: hyper::Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>>,
+    inner: Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>>,
 }
 
 impl HttpClient {
@@ -25,14 +25,13 @@ impl HttpClient {
         let https = HttpsConnectorBuilder::new().with_native_roots()?;
 
         Ok(Self {
-            inner: Client::builder()
-                .build::<_, hyper::Body>(https.https_or_http().enable_http2().build()),
+            inner: Client::builder().build::<_, Body>(https.https_or_http().enable_http2().build()),
         })
     }
 
     pub(crate) async fn token(
         &self,
-        request: &impl Fn() -> hyper::Request<hyper::Body>,
+        request: &impl Fn() -> Request<Body>,
         provider: &'static str,
     ) -> Result<Arc<Token>, Error> {
         let mut retries = 0;
@@ -61,7 +60,7 @@ impl HttpClient {
 
     async fn try_token(
         &self,
-        request: &impl Fn() -> hyper::Request<hyper::Body>,
+        request: &impl Fn() -> Request<Body>,
         provider: &'static str,
     ) -> Result<Bytes, Error> {
         let req = request();
@@ -84,10 +83,7 @@ impl HttpClient {
         Ok(body)
     }
 
-    pub(crate) async fn request(
-        &self,
-        req: hyper::Request<hyper::Body>,
-    ) -> Result<hyper::Response<hyper::body::Body>, hyper::Error> {
+    pub(crate) async fn request(&self, req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
         self.inner.request(req).await
     }
 }
