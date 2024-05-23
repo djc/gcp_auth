@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fmt;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
 use async_trait::async_trait;
@@ -52,10 +53,7 @@ impl CustomServiceAccount {
 
     /// Read service account credentials from the given JSON string
     pub fn from_json(s: &str) -> Result<Self, Error> {
-        match serde_json::from_str::<ApplicationCredentials>(s) {
-            Ok(credentials) => Self::new(credentials),
-            Err(e) => Err(Error::CustomServiceAccountCredentials(e)),
-        }
+        Self::new(ApplicationCredentials::from_str(s)?)
     }
 
     /// Set the `subject` to impersonate a user
@@ -221,6 +219,15 @@ pub(crate) struct ApplicationCredentials {
     pub(crate) auth_provider_x509_cert_url: Option<String>,
     /// client_x509_cert_url
     pub(crate) client_x509_cert_url: Option<String>,
+}
+
+impl FromStr for ApplicationCredentials {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        serde_json::from_str::<ApplicationCredentials>(s)
+            .map_err(Error::CustomServiceAccountCredentials)
+    }
 }
 
 impl fmt::Debug for ApplicationCredentials {
