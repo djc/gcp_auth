@@ -50,7 +50,7 @@ pub enum Error {
 
     /// Could not connect to  server
     #[error("Could not establish connection with server")]
-    ConnectionError(#[source] hyper::Error),
+    ConnectionError(#[from] hyper::Error),
 
     /// Could not parse response from server
     #[error("Could not parse server response")]

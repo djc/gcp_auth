@@ -10,7 +10,7 @@ use tracing::{instrument, Level};
 
 use crate::authentication_manager::ServiceAccount;
 use crate::error::Error;
-use crate::types::{HttpClient, HyperExt, Token};
+use crate::types::{HttpClient, Token};
 
 #[derive(Debug)]
 pub(crate) struct ConfigDefaultCredentials {
@@ -52,7 +52,7 @@ impl ConfigDefaultCredentials {
     #[instrument(level = Level::DEBUG)]
     async fn get_token(cred: &UserCredentials, client: &HttpClient) -> Result<Arc<Token>, Error> {
         let mut retries = 0;
-        let response = loop {
+        loop {
             let req = Self::build_token_request(&RefreshRequest {
                 client_id: &cred.client_id,
                 client_secret: &cred.client_secret,
@@ -60,9 +60,9 @@ impl ConfigDefaultCredentials {
                 refresh_token: &cred.refresh_token,
             });
 
-            let err = match client.request(req).await {
+            let err = match client.token(req).await {
                 // Early return when the request succeeds
-                Ok(response) => break response,
+                Ok(token) => return Ok(token),
                 Err(err) => err,
             };
 
@@ -71,11 +71,9 @@ impl ConfigDefaultCredentials {
             );
             retries += 1;
             if retries >= RETRY_COUNT {
-                return Err(Error::OAuthConnectionError(err));
+                return Err(err);
             }
-        };
-
-        response.deserialize().await.map_err(Into::into)
+        }
     }
 }
 

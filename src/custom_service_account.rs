@@ -13,7 +13,7 @@ use tracing::{instrument, Level};
 
 use crate::authentication_manager::ServiceAccount;
 use crate::error::Error;
-use crate::types::{HttpClient, HyperExt, Signer, Token};
+use crate::types::{HttpClient, Signer, Token};
 
 /// A custom service account containing credentials
 ///
@@ -107,16 +107,16 @@ impl ServiceAccount for CustomServiceAccount {
             .finish();
 
         let mut retries = 0;
-        let response = loop {
+        let token = loop {
             let request = hyper::Request::post(&self.credentials.token_uri)
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(hyper::Body::from(rqbody.clone()))
                 .unwrap();
 
             tracing::debug!("requesting token from service account: {request:?}");
-            let err = match self.client.request(request).await {
+            let err = match self.client.token(request).await {
                 // Early return when the request succeeds
-                Ok(response) => break response,
+                Ok(token) => break token,
                 Err(err) => err,
             };
 
@@ -125,11 +125,9 @@ impl ServiceAccount for CustomServiceAccount {
             );
             retries += 1;
             if retries >= RETRY_COUNT {
-                return Err(Error::OAuthConnectionError(err));
+                return Err(err);
             }
         };
-
-        let token = Arc::new(response.deserialize::<Token>().await?);
 
         let key = scopes.iter().map(|x| (*x).to_string()).collect();
         self.tokens.write().unwrap().insert(key, token.clone());
