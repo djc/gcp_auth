@@ -30,36 +30,14 @@ impl MetadataServiceAccount {
         })
     }
 
-    fn build_token_request(uri: &str) -> Request<Body> {
-        Request::builder()
-            .method(Method::GET)
-            .uri(uri)
-            .header("Metadata-Flavor", "Google")
-            .body(Body::empty())
-            .unwrap()
-    }
-
     #[instrument(level = Level::DEBUG)]
     async fn get_token(client: &HttpClient) -> Result<Arc<Token>, Error> {
-        let mut retries = 0;
-        tracing::debug!("Getting token from GCP instance metadata server");
-        loop {
-            let req = Self::build_token_request(Self::DEFAULT_TOKEN_GCP_URI);
-
-            let err = match client.token(req).await {
-                // Early return when the request succeeds
-                Ok(token) => return Ok(token),
-                Err(err) => err,
-            };
-
-            tracing::warn!(
-                "Failed to get token from GCP instance metadata server: {err}, trying again..."
-            );
-            retries += 1;
-            if retries >= RETRY_COUNT {
-                return Err(err);
-            }
-        }
+        client
+            .token(
+                &|| metadata_request(Self::DEFAULT_TOKEN_GCP_URI),
+                "ConfigDefaultCredentials",
+            )
+            .await
     }
 }
 
@@ -67,7 +45,7 @@ impl MetadataServiceAccount {
 impl ServiceAccount for MetadataServiceAccount {
     async fn project_id(&self) -> Result<Arc<str>, Error> {
         tracing::debug!("Getting project ID from GCP instance metadata server");
-        let req = Self::build_token_request(Self::DEFAULT_PROJECT_ID_GCP_URI);
+        let req = metadata_request(Self::DEFAULT_PROJECT_ID_GCP_URI);
         let rsp = self
             .client
             .request(req)
@@ -95,5 +73,11 @@ impl ServiceAccount for MetadataServiceAccount {
     }
 }
 
-/// How many times to attempt to fetch a token from the GCP metadata server.
-const RETRY_COUNT: u8 = 5;
+fn metadata_request(uri: &str) -> Request<Body> {
+    Request::builder()
+        .method(Method::GET)
+        .uri(uri)
+        .header("Metadata-Flavor", "Google")
+        .body(Body::empty())
+        .unwrap()
+}
