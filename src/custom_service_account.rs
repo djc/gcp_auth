@@ -13,8 +13,7 @@ use tracing::{instrument, Level};
 
 use crate::authentication_manager::ServiceAccount;
 use crate::error::Error;
-use crate::types::{self, HyperClient, Signer, Token};
-use crate::util::HyperExt;
+use crate::types::{self, HyperClient, HyperExt, Signer, Token};
 
 /// A custom service account containing credentials
 ///

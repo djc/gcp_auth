@@ -96,7 +96,6 @@ mod default_service_account;
 mod error;
 mod gcloud_authorized_user;
 mod types;
-mod util;
 
 pub use authentication_manager::AuthenticationManager;
 pub use custom_service_account::CustomServiceAccount;
