@@ -71,7 +71,7 @@ impl MetadataServiceAccount {
 
 #[async_trait]
 impl ServiceAccount for MetadataServiceAccount {
-    async fn project_id(&self) -> Result<String, Error> {
+    async fn project_id(&self) -> Result<Arc<str>, Error> {
         tracing::debug!("Getting project ID from GCP instance metadata server");
         let req = Self::build_token_request(Self::DEFAULT_PROJECT_ID_GCP_URI);
         let rsp = self
@@ -85,7 +85,7 @@ impl ServiceAccount for MetadataServiceAccount {
             .await
             .map_err(Error::ConnectionError)?;
         match str::from_utf8(&body) {
-            Ok(s) => Ok(s.to_owned()),
+            Ok(s) => Ok(Arc::from(s)),
             Err(_) => Err(Error::ProjectIdNonUtf8),
         }
     }

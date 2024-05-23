@@ -84,7 +84,7 @@ impl CustomServiceAccount {
 
 #[async_trait]
 impl ServiceAccount for CustomServiceAccount {
-    async fn project_id(&self) -> Result<String, Error> {
+    async fn project_id(&self) -> Result<Arc<str>, Error> {
         match &self.credentials.project_id {
             Some(pid) => Ok(pid.clone()),
             None => Err(Error::ProjectIdNotFound),
@@ -193,7 +193,7 @@ impl<'a> Claims<'a> {
 pub(crate) struct ApplicationCredentials {
     pub(crate) r#type: Option<String>,
     /// project_id
-    pub(crate) project_id: Option<String>,
+    pub(crate) project_id: Option<Arc<str>>,
     /// private_key_id
     pub(crate) private_key_id: Option<String>,
     /// private_key
