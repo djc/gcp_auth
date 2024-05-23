@@ -82,7 +82,7 @@ impl ConfigDefaultCredentials {
 
 #[async_trait]
 impl ServiceAccount for ConfigDefaultCredentials {
-    async fn project_id(&self) -> Result<String, Error> {
+    async fn project_id(&self) -> Result<Arc<str>, Error> {
         self.credentials
             .quota_project_id
             .clone()
@@ -115,7 +115,7 @@ struct UserCredentials {
     /// Client secret
     pub(crate) client_secret: String,
     /// Project ID
-    pub(crate) quota_project_id: Option<String>,
+    pub(crate) quota_project_id: Option<Arc<str>>,
     /// Refresh Token
     pub(crate) refresh_token: String,
     /// Type

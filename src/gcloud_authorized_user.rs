@@ -20,7 +20,7 @@ pub(crate) const DEFAULT_TOKEN_DURATION: Duration = Duration::from_secs(3600);
 #[derive(Debug)]
 pub(crate) struct GCloudAuthorizedUser {
     gcloud: PathBuf,
-    project_id: Option<String>,
+    project_id: Option<Arc<str>>,
     token: RwLock<Arc<Token>>,
 }
 
@@ -31,7 +31,7 @@ impl GCloudAuthorizedUser {
         let token = RwLock::new(Self::token(&gcloud)?);
         Ok(Self {
             gcloud,
-            project_id,
+            project_id: project_id.map(Arc::from),
             token,
         })
     }
@@ -46,7 +46,7 @@ impl GCloudAuthorizedUser {
 
 #[async_trait]
 impl ServiceAccount for GCloudAuthorizedUser {
-    async fn project_id(&self) -> Result<String, Error> {
+    async fn project_id(&self) -> Result<Arc<str>, Error> {
         self.project_id.clone().ok_or(Error::NoProjectId)
     }
 

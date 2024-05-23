@@ -13,7 +13,7 @@ use crate::types::{self, Token};
 
 #[async_trait]
 pub(crate) trait ServiceAccount: Send + Sync {
-    async fn project_id(&self) -> Result<String, Error>;
+    async fn project_id(&self) -> Result<Arc<str>, Error>;
     fn get_token(&self, scopes: &[&str]) -> Option<Arc<Token>>;
     async fn refresh_token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error>;
 }
@@ -111,7 +111,7 @@ impl AuthenticationManager {
     /// Request the project ID for the authenticating account
     ///
     /// This is only available for service account-based authentication methods.
-    pub async fn project_id(&self) -> Result<String, Error> {
+    pub async fn project_id(&self) -> Result<Arc<str>, Error> {
         self.service_account.project_id().await
     }
 }
