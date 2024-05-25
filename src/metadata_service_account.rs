@@ -53,7 +53,7 @@ impl MetadataServiceAccount {
         client
             .token(
                 &|| metadata_request(DEFAULT_TOKEN_GCP_URI),
-                "ConfigDefaultCredentials",
+                "MetadataServiceAccount",
             )
             .await
     }

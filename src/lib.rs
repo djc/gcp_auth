@@ -97,8 +97,8 @@ pub use custom_service_account::CustomServiceAccount;
 mod config_default_credentials;
 use config_default_credentials::ConfigDefaultCredentials;
 
-mod default_service_account;
-use default_service_account::MetadataServiceAccount;
+mod metadata_service_account;
+use metadata_service_account::MetadataServiceAccount;
 
 mod gcloud_authorized_user;
 use gcloud_authorized_user::GCloudAuthorizedUser;
