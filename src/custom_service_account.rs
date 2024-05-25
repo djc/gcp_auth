@@ -218,7 +218,7 @@ impl ApplicationCredentials {
             .map(|path| {
                 tracing::debug!(
                     ?path,
-                    "Reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var"
+                    "reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var"
                 );
                 Self::from_file(PathBuf::from(path))
             })
