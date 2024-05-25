@@ -64,26 +64,29 @@ impl HttpClient {
         provider: &'static str,
     ) -> Result<Bytes, Error> {
         let req = request();
-        tracing::debug!(?req, provider, "requesting token");
-        let (parts, body) = self.inner.request(req).await?.into_parts();
+        let (parts, body) = self.request(req, provider).await?.into_parts();
         let body = hyper::body::to_bytes(body)
             .await
             .map_err(Error::ConnectionError)?;
 
         if !parts.status.is_success() {
-            let error = format!(
-                "Server responded with error {}: {}",
-                parts.status,
-                String::from_utf8_lossy(body.as_ref())
-            );
-            tracing::error!("{}", error);
-            return Err(Error::ServerUnavailable(error));
+            let body = String::from_utf8_lossy(body.as_ref());
+            tracing::warn!(%body, status = ?parts.status, "token request failed");
+            return Err(Error::ServerUnavailable(format!(
+                "server error {:?}: {}",
+                parts.status, body
+            )));
         }
 
         Ok(body)
     }
 
-    pub(crate) async fn request(&self, req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
+    pub(crate) async fn request(
+        &self,
+        req: Request<Body>,
+        provider: &'static str,
+    ) -> Result<Response<Body>, hyper::Error> {
+        tracing::debug!(url = ?req.uri(), provider, "requesting token");
         self.inner.request(req).await
     }
 }

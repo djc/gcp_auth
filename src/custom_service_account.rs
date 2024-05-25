@@ -69,7 +69,7 @@ impl CustomServiceAccount {
         })
     }
 
-    #[instrument(level = Level::DEBUG)]
+    #[instrument(level = Level::DEBUG, skip(self))]
     async fn fetch_token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error> {
         let jwt =
             Claims::new(&self.credentials, scopes, self.subject.as_deref()).to_jwt(&self.signer)?;
@@ -217,6 +217,7 @@ impl ApplicationCredentials {
         env::var_os("GOOGLE_APPLICATION_CREDENTIALS")
             .map(|path| {
                 tracing::debug!(
+                    ?path,
                     "Reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var"
                 );
                 Self::from_file(PathBuf::from(path))
