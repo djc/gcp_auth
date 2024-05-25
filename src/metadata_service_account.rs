@@ -21,7 +21,7 @@ impl MetadataServiceAccount {
     pub(crate) async fn new(client: &HttpClient) -> Result<Self, Error> {
         let token = RwLock::new(Self::get_token(client).await?);
 
-        tracing::debug!("Getting project ID from GCP instance metadata server");
+        tracing::debug!("getting project ID from GCP instance metadata server");
         let req = metadata_request(DEFAULT_PROJECT_ID_GCP_URI);
         let rsp = client
             .request(req, "MetadataServiceAccount")

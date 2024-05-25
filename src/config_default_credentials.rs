@@ -21,7 +21,7 @@ pub(crate) struct ConfigDefaultCredentials {
 
 impl ConfigDefaultCredentials {
     pub(crate) async fn new(client: &HttpClient) -> Result<Self, Error> {
-        tracing::debug!("Loading user credentials file");
+        tracing::debug!("loading user credentials file");
         let mut home = home::home_dir().ok_or(Error::NoHomeDir)?;
         home.push(USER_CREDENTIALS_PATH);
 
