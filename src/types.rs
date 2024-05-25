@@ -4,7 +4,7 @@ use std::{fmt, io};
 
 use chrono::{DateTime, Utc};
 use hyper::body::{Body, Bytes};
-use hyper::{Client, Request, Response};
+use hyper::{Client, Request};
 use hyper_rustls::HttpsConnectorBuilder;
 use ring::rand::SystemRandom;
 use ring::signature::{RsaKeyPair, RSA_PKCS1_SHA256};
@@ -36,7 +36,7 @@ impl HttpClient {
     ) -> Result<Arc<Token>, Error> {
         let mut retries = 0;
         let body = loop {
-            let err = match self.try_token(request, provider).await {
+            let err = match self.request(request(), provider).await {
                 // Early return when the request succeeds
                 Ok(body) => break body,
                 Err(err) => err,
@@ -58,13 +58,13 @@ impl HttpClient {
         serde_json::from_slice(&body).map_err(Error::ParsingError)
     }
 
-    async fn try_token(
+    pub(crate) async fn request(
         &self,
-        request: &impl Fn() -> Request<Body>,
+        req: Request<Body>,
         provider: &'static str,
     ) -> Result<Bytes, Error> {
-        let req = request();
-        let (parts, body) = self.request(req, provider).await?.into_parts();
+        tracing::debug!(url = ?req.uri(), provider, "requesting token");
+        let (parts, body) = self.inner.request(req).await?.into_parts();
         let body = hyper::body::to_bytes(body)
             .await
             .map_err(Error::ConnectionError)?;
@@ -79,15 +79,6 @@ impl HttpClient {
         }
 
         Ok(body)
-    }
-
-    pub(crate) async fn request(
-        &self,
-        req: Request<Body>,
-        provider: &'static str,
-    ) -> Result<Response<Body>, hyper::Error> {
-        tracing::debug!(url = ?req.uri(), provider, "requesting token");
-        self.inner.request(req).await
     }
 }
 

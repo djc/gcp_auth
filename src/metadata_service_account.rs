@@ -24,18 +24,7 @@ impl MetadataServiceAccount {
 
         tracing::debug!("getting project ID from GCP instance metadata server");
         let req = metadata_request(DEFAULT_PROJECT_ID_GCP_URI);
-        let rsp = client
-            .request(req, "MetadataServiceAccount")
-            .await
-            .map_err(Error::ConnectionError)?;
-        if !rsp.status().is_success() {
-            return Err(Error::ProjectIdNotFound);
-        }
-
-        let (_, body) = rsp.into_parts();
-        let body = hyper::body::to_bytes(body)
-            .await
-            .map_err(Error::ConnectionError)?;
+        let body = client.request(req, "MetadataServiceAccount").await?;
         let project_id = match str::from_utf8(&body) {
             Ok(s) if !s.is_empty() => Arc::from(s),
             Ok(_) => return Err(Error::NoProjectId),
