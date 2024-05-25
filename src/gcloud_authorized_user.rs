@@ -21,6 +21,7 @@ pub(crate) struct GCloudAuthorizedUser {
 
 impl GCloudAuthorizedUser {
     pub(crate) async fn new() -> Result<Self, Error> {
+        tracing::debug!("try to print access token via `gcloud`");
         let gcloud = which("gcloud").map_err(|_| GCloudNotFound)?;
         let project_id = run(&gcloud, &["config", "get-value", "project"]).ok();
         let token = RwLock::new(Self::fetch_token(&gcloud)?);
