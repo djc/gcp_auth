@@ -94,8 +94,8 @@ use tracing::{instrument, Level};
 mod custom_service_account;
 pub use custom_service_account::CustomServiceAccount;
 
-mod default_authorized_user;
-use default_authorized_user::ConfigDefaultCredentials;
+mod config_default_credentials;
+use config_default_credentials::ConfigDefaultCredentials;
 
 mod default_service_account;
 use default_service_account::MetadataServiceAccount;
