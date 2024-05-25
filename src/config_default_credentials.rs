@@ -36,7 +36,7 @@ impl ConfigDefaultCredentials {
         })
     }
 
-    #[instrument(level = Level::DEBUG)]
+    #[instrument(level = Level::DEBUG, skip(cred, client))]
     async fn get_token(cred: &UserCredentials, client: &HttpClient) -> Result<Arc<Token>, Error> {
         client
             .token(

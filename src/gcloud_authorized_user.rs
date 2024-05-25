@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use tokio::sync::RwLock;
+use tracing::instrument;
 use which::which;
 
 use crate::types::Token;
@@ -30,6 +31,7 @@ impl GCloudAuthorizedUser {
         })
     }
 
+    #[instrument(level = tracing::Level::DEBUG, skip(gcloud))]
     fn token(gcloud: &Path) -> Result<Arc<Token>, Error> {
         Ok(Arc::new(Token::from_string(
             run(gcloud, &["auth", "print-access-token", "--quiet"])?,

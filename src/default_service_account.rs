@@ -23,7 +23,10 @@ impl MetadataServiceAccount {
 
         tracing::debug!("Getting project ID from GCP instance metadata server");
         let req = metadata_request(DEFAULT_PROJECT_ID_GCP_URI);
-        let rsp = client.request(req).await.map_err(Error::ConnectionError)?;
+        let rsp = client
+            .request(req, "MetadataServiceAccount")
+            .await
+            .map_err(Error::ConnectionError)?;
         if !rsp.status().is_success() {
             return Err(Error::ProjectIdNotFound);
         }
@@ -45,7 +48,7 @@ impl MetadataServiceAccount {
         })
     }
 
-    #[instrument(level = Level::DEBUG)]
+    #[instrument(level = Level::DEBUG, skip(client))]
     async fn get_token(client: &HttpClient) -> Result<Arc<Token>, Error> {
         client
             .token(
