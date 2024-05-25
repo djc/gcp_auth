@@ -134,7 +134,7 @@ impl TokenProvider for CustomServiceAccount {
     async fn project_id(&self) -> Result<Arc<str>, Error> {
         match &self.credentials.project_id {
             Some(pid) => Ok(pid.clone()),
-            None => Err(Error::ProjectIdNotFound),
+            None => Err(Error::Str("no project ID in application credentials")),
         }
     }
 }
@@ -227,9 +227,10 @@ impl ApplicationCredentials {
     }
 
     fn from_file(path: impl AsRef<Path>) -> Result<Self, Error> {
-        let file = File::open(path.as_ref()).map_err(Error::CustomServiceAccountPath)?;
+        let file = File::open(path.as_ref())
+            .map_err(|err| Error::Io("failed to open application credentials file", err))?;
         serde_json::from_reader::<_, ApplicationCredentials>(file)
-            .map_err(Error::CustomServiceAccountCredentials)
+            .map_err(|err| Error::Json("failed to deserialize ApplicationCredentials", err))
     }
 }
 
@@ -238,7 +239,7 @@ impl FromStr for ApplicationCredentials {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         serde_json::from_str::<ApplicationCredentials>(s)
-            .map_err(Error::CustomServiceAccountCredentials)
+            .map_err(|err| Error::Json("failed to deserialize ApplicationCredentials", err))
     }
 }
 

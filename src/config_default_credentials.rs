@@ -22,12 +22,13 @@ pub(crate) struct ConfigDefaultCredentials {
 impl ConfigDefaultCredentials {
     pub(crate) async fn new(client: &HttpClient) -> Result<Self, Error> {
         tracing::debug!("try to load credentials from {}", USER_CREDENTIALS_PATH);
-        let mut home = home::home_dir().ok_or(Error::NoHomeDir)?;
+        let mut home = home::home_dir().ok_or(Error::Str("home directory not found"))?;
         home.push(USER_CREDENTIALS_PATH);
 
-        let file = fs::File::open(home).map_err(Error::UserProfilePath)?;
+        let file = fs::File::open(home)
+            .map_err(|err| Error::Io("failed to open user credentials path", err))?;
         let credentials = serde_json::from_reader::<_, UserCredentials>(file)
-            .map_err(Error::UserProfileFormat)?;
+            .map_err(|err| Error::Json("failed to deserialize UserCredentials", err))?;
 
         Ok(Self {
             client: client.clone(),
@@ -80,7 +81,7 @@ impl TokenProvider for ConfigDefaultCredentials {
         self.credentials
             .quota_project_id
             .clone()
-            .ok_or(Error::NoProjectId)
+            .ok_or(Error::Str("no project ID in user credentials"))
     }
 }
 

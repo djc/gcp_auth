@@ -183,92 +183,25 @@ pub enum Error {
     ///
     /// All authentication methods have been tested and none succeeded.
     /// Service account file can be downloaded from GCP in json format.
-    #[error("No available authentication method was discovered")]
+    #[error("no available authentication method found")]
     NoAuthMethod(Box<Error>, Box<Error>, Box<Error>),
 
-    /// Error in underlying RustTLS library.
-    /// Might signal problem with establishing secure connection using trusted certificates
-    #[error("TLS error")]
-    TlsError(#[source] rustls::Error),
-
-    /// Error when establishing connection to OAuth server
-    #[error("Could not establish connection with OAuth server")]
-    OAuthConnectionError(#[source] hyper::Error),
-
-    /// Wrong path to custom service account credentials provided
-    ///
-    /// By default, the custom service account credentials are parsed from the path pointed to by the
-    /// `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
-    #[error("Invalid path to custom service account")]
-    CustomServiceAccountPath(#[source] std::io::Error),
-
-    /// Failed to parse the application credentials provided
-    ///
-    /// By default, the custom service account credentials are parsed from the path pointed to by the
-    /// `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
-    #[error("Unable to parse custom service account credentials")]
-    CustomServiceAccountCredentials(#[source] serde_json::error::Error),
-
-    /// Default user profile not found
-    ///
-    /// User can authenticate locally during development using `gcloud auth login` which results in creating
-    /// `~/.config/gcloud/application_default_credentials.json` which couldn't be find on the machine
-    #[error("User authentication profile not found")]
-    UserProfilePath(#[source] std::io::Error),
-
-    /// Wrong format of user profile
-    #[error("User profile was not parsable")]
-    UserProfileFormat(#[source] serde_json::error::Error),
-
     /// Could not connect to  server
-    #[error("Could not establish connection with server")]
-    ConnectionError(#[from] hyper::Error),
+    #[error("{0}")]
+    Http(&'static str, #[source] hyper::Error),
 
-    /// Could not parse response from server
-    #[error("Could not parse server response")]
-    ParsingError(#[source] serde_json::error::Error),
+    #[error("{0}: {1}")]
+    Io(&'static str, #[source] std::io::Error),
 
-    /// Could not connect to server
-    #[error("Server unavailable: {0}")]
-    ServerUnavailable(String),
+    #[error("{0}: {1}")]
+    Json(&'static str, #[source] serde_json::error::Error),
 
-    /// Could not sign requested message
-    #[error("Could not sign")]
-    SignerFailed,
+    #[error("{0}: {1}")]
+    Other(
+        &'static str,
+        #[source] Box<dyn std::error::Error + Send + Sync>,
+    ),
 
-    /// Could not initialize signer
-    #[error("Couldn't initialize signer")]
-    SignerInit,
-
-    /// Could not find Home directory in the environment
-    #[error("Home directory not found")]
-    NoHomeDir,
-
-    /// Project ID not supported for current authentication method
-    #[error("Project ID not supported for current authentication method")]
-    NoProjectId,
-
-    /// Project ID not found through current authentication method
-    #[error("Project ID not found through current authentication method")]
-    ProjectIdNotFound,
-
-    /// Project ID is invalid UTF-8
-    #[error("Project ID is invalid UTF-8")]
-    ProjectIdNonUtf8,
-
-    /// GCloud executable not found
-    #[error("GCloud executable not found in $PATH")]
-    GCloudNotFound,
-
-    /// GCloud returned an error status
-    #[error("GCloud returned a non OK status")]
-    GCloudError,
-
-    /// GCloud output couldn't be parsed
-    #[error("Failed to parse output of GCloud")]
-    GCloudParseError,
-
-    /// Represents all other cases of `std::io::Error`.
-    #[error(transparent)]
-    IOError(#[from] std::io::Error),
+    #[error("{0}")]
+    Str(&'static str),
 }

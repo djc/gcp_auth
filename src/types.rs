@@ -1,6 +1,6 @@
+use std::fmt;
 use std::sync::Arc;
 use std::time::Duration;
-use std::{fmt, io};
 
 use chrono::{DateTime, Utc};
 use hyper::body::{Body, Bytes};
@@ -22,7 +22,11 @@ impl HttpClient {
         #[cfg(feature = "webpki-roots")]
         let https = HttpsConnectorBuilder::new().with_webpki_roots();
         #[cfg(not(feature = "webpki-roots"))]
-        let https = HttpsConnectorBuilder::new().with_native_roots()?;
+        let https = HttpsConnectorBuilder::new()
+            .with_native_roots()
+            .map_err(|err| {
+                Error::Io("failed to load native TLS root certificates for HTTPS", err)
+            })?;
 
         Ok(Self {
             inner: Client::builder().build::<_, Body>(https.https_or_http().enable_http2().build()),
@@ -55,7 +59,8 @@ impl HttpClient {
             }
         };
 
-        serde_json::from_slice(&body).map_err(Error::ParsingError)
+        serde_json::from_slice(&body)
+            .map_err(|err| Error::Json("failed to deserialize token from response", err))
     }
 
     pub(crate) async fn request(
@@ -64,18 +69,21 @@ impl HttpClient {
         provider: &'static str,
     ) -> Result<Bytes, Error> {
         tracing::debug!(url = ?req.uri(), provider, "requesting token");
-        let (parts, body) = self.inner.request(req).await?.into_parts();
+        let (parts, body) = self
+            .inner
+            .request(req)
+            .await
+            .map_err(|err| Error::Http("HTTP request failed", err))?
+            .into_parts();
+
         let body = hyper::body::to_bytes(body)
             .await
-            .map_err(Error::ConnectionError)?;
+            .map_err(|err| Error::Http("failed to read HTTP response body", err))?;
 
         if !parts.status.is_success() {
             let body = String::from_utf8_lossy(body.as_ref());
             tracing::warn!(%body, status = ?parts.status, "token request failed");
-            return Err(Error::ServerUnavailable(format!(
-                "server error {:?}: {}",
-                parts.status, body
-            )));
+            return Err(Error::Str("token request failed"));
         }
 
         Ok(body)
@@ -159,23 +167,21 @@ impl Signer {
         let key = match rustls_pemfile::private_key(&mut pem_pkcs8.as_bytes()) {
             Ok(Some(key)) => key,
             Ok(None) => {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    "No private key found in PEM",
-                )
-                .into())
+                return Err(Error::Str(
+                    "no private key found in credentials private key data",
+                ))
             }
-            Err(_) => {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    "Error reading key from PEM",
-                )
-                .into())
+            Err(err) => {
+                return Err(Error::Io(
+                    "failed to read credentials private key data",
+                    err,
+                ))
             }
         };
 
         Ok(Signer {
-            key: RsaKeyPair::from_pkcs8(key.secret_der()).map_err(|_| Error::SignerInit)?,
+            key: RsaKeyPair::from_pkcs8(key.secret_der())
+                .map_err(|_| Error::Str("invalid private key in credentials"))?,
             rng: SystemRandom::new(),
         })
     }
@@ -185,7 +191,7 @@ impl Signer {
         let mut signature = vec![0; self.key.public().modulus_len()];
         self.key
             .sign(&RSA_PKCS1_SHA256, &self.rng, input, &mut signature)
-            .map_err(|_| Error::SignerFailed)?;
+            .map_err(|_| Error::Str("failed to sign with credentials key"))?;
         Ok(signature)
     }
 }
