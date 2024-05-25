@@ -27,8 +27,16 @@ impl MetadataServiceAccount {
         let body = client.request(req, "MetadataServiceAccount").await?;
         let project_id = match str::from_utf8(&body) {
             Ok(s) if !s.is_empty() => Arc::from(s),
-            Ok(_) => return Err(Error::NoProjectId),
-            Err(_) => return Err(Error::ProjectIdNonUtf8),
+            Ok(_) => {
+                return Err(Error::Str(
+                    "empty project ID from GCP instance metadata server",
+                ))
+            }
+            Err(_) => {
+                return Err(Error::Str(
+                    "received invalid UTF-8 project ID from GCP instance metadata server",
+                ))
+            }
         };
 
         Ok(Self {

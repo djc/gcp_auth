@@ -9,7 +9,6 @@ use tracing::instrument;
 use which::which;
 
 use crate::types::Token;
-use crate::Error::{GCloudError, GCloudNotFound, GCloudParseError};
 use crate::{Error, TokenProvider};
 
 #[derive(Debug)]
@@ -22,7 +21,7 @@ pub(crate) struct GCloudAuthorizedUser {
 impl GCloudAuthorizedUser {
     pub(crate) async fn new() -> Result<Self, Error> {
         tracing::debug!("try to print access token via `gcloud`");
-        let gcloud = which("gcloud").map_err(|_| GCloudNotFound)?;
+        let gcloud = which("gcloud").map_err(|_| Error::Str("`gcloud` binary not found"))?;
         let project_id = run(&gcloud, &["config", "get-value", "project"]).ok();
         let token = RwLock::new(Self::fetch_token(&gcloud)?);
         Ok(Self {
@@ -56,7 +55,9 @@ impl TokenProvider for GCloudAuthorizedUser {
     }
 
     async fn project_id(&self) -> Result<Arc<str>, Error> {
-        self.project_id.clone().ok_or(Error::NoProjectId)
+        self.project_id
+            .clone()
+            .ok_or(Error::Str("failed to get project ID from `gcloud`"))
     }
 }
 
@@ -66,14 +67,15 @@ fn run(gcloud: &Path, cmd: &[&str]) -> Result<String, Error> {
 
     let mut stdout = match command.output() {
         Ok(output) if output.status.success() => output.stdout,
-        _ => return Err(GCloudError),
+        Ok(_) => return Err(Error::Str("running `gcloud` command failed")),
+        Err(err) => return Err(Error::Io("failed to run `gcloud`", err)),
     };
 
     while let Some(b' ' | b'\r' | b'\n') = stdout.last() {
         stdout.pop();
     }
 
-    String::from_utf8(stdout).map_err(|_| GCloudParseError)
+    String::from_utf8(stdout).map_err(|_| Error::Str("output from `gcloud` is not UTF-8"))
 }
 
 /// The default number of seconds that it takes for a Google Cloud auth token to expire.
