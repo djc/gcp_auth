@@ -31,13 +31,13 @@ impl ConfigDefaultCredentials {
 
         Ok(Self {
             client: client.clone(),
-            token: RwLock::new(Self::get_token(&credentials, client).await?),
+            token: RwLock::new(Self::fetch_token(&credentials, client).await?),
             credentials,
         })
     }
 
     #[instrument(level = Level::DEBUG, skip(cred, client))]
-    async fn get_token(cred: &UserCredentials, client: &HttpClient) -> Result<Arc<Token>, Error> {
+    async fn fetch_token(cred: &UserCredentials, client: &HttpClient) -> Result<Arc<Token>, Error> {
         client
             .token(
                 &|| {
@@ -71,7 +71,7 @@ impl TokenProvider for ConfigDefaultCredentials {
         }
 
         let mut locked = self.token.write().await;
-        let token = Self::get_token(&self.credentials, &self.client).await?;
+        let token = Self::fetch_token(&self.credentials, &self.client).await?;
         *locked = token.clone();
         Ok(token)
     }

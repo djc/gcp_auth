@@ -19,7 +19,7 @@ pub(crate) struct MetadataServiceAccount {
 
 impl MetadataServiceAccount {
     pub(crate) async fn new(client: &HttpClient) -> Result<Self, Error> {
-        let token = RwLock::new(Self::get_token(client).await?);
+        let token = RwLock::new(Self::fetch_token(client).await?);
 
         tracing::debug!("getting project ID from GCP instance metadata server");
         let req = metadata_request(DEFAULT_PROJECT_ID_GCP_URI);
@@ -49,7 +49,7 @@ impl MetadataServiceAccount {
     }
 
     #[instrument(level = Level::DEBUG, skip(client))]
-    async fn get_token(client: &HttpClient) -> Result<Arc<Token>, Error> {
+    async fn fetch_token(client: &HttpClient) -> Result<Arc<Token>, Error> {
         client
             .token(
                 &|| metadata_request(DEFAULT_TOKEN_GCP_URI),
@@ -68,7 +68,7 @@ impl TokenProvider for MetadataServiceAccount {
         }
 
         let mut locked = self.token.write().await;
-        let token = Self::get_token(&self.client).await?;
+        let token = Self::fetch_token(&self.client).await?;
         *locked = token.clone();
         Ok(token)
     }
