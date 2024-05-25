@@ -37,6 +37,7 @@ pub struct CustomServiceAccount {
 impl CustomServiceAccount {
     /// Check `GOOGLE_APPLICATION_CREDENTIALS` environment variable for a path to JSON credentials
     pub fn from_env() -> Result<Option<Self>, Error> {
+        tracing::debug!("check for GOOGLE_APPLICATION_CREDENTIALS env var");
         match ApplicationCredentials::from_env()? {
             Some(credentials) => Self::new(credentials, HttpClient::new()?).map(Some),
             None => Ok(None),
