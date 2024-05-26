@@ -286,6 +286,15 @@ pub(crate) struct AuthorizedUserRefreshToken {
     pub(crate) refresh_token: String,
 }
 
+impl AuthorizedUserRefreshToken {
+    pub(crate) fn from_file(path: impl AsRef<Path>) -> Result<Self, Error> {
+        let file = File::open(path.as_ref())
+            .map_err(|err| Error::Io("failed to open application credentials file", err))?;
+        serde_json::from_reader(file)
+            .map_err(|err| Error::Json("failed to deserialize ApplicationCredentials", err))
+    }
+}
+
 impl fmt::Debug for AuthorizedUserRefreshToken {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("UserCredentials")

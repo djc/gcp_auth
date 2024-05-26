@@ -1,4 +1,3 @@
-use std::fs;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -35,11 +34,7 @@ impl ConfigDefaultCredentials {
         let mut home = home::home_dir().ok_or(Error::Str("home directory not found"))?;
         home.push(USER_CREDENTIALS_PATH);
 
-        let file = fs::File::open(home)
-            .map_err(|err| Error::Io("failed to open user credentials path", err))?;
-        let credentials = serde_json::from_reader::<_, AuthorizedUserRefreshToken>(file)
-            .map_err(|err| Error::Json("failed to deserialize UserCredentials", err))?;
-
+        let credentials = AuthorizedUserRefreshToken::from_file(&home)?;
         debug!(project = ?credentials.quota_project_id, client = credentials.client_id, "found user credentials");
 
         Ok(Self {
