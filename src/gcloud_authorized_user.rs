@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use async_trait::async_trait;
 use tokio::sync::RwLock;
-use tracing::instrument;
+use tracing::{debug, instrument};
 use which::which;
 
 use crate::types::Token;
@@ -20,7 +20,7 @@ pub(crate) struct GCloudAuthorizedUser {
 
 impl GCloudAuthorizedUser {
     pub(crate) async fn new() -> Result<Self, Error> {
-        tracing::debug!("try to print access token via `gcloud`");
+        debug!("try to print access token via `gcloud`");
         let gcloud = which("gcloud").map_err(|_| Error::Str("`gcloud` binary not found"))?;
         let project_id = run(&gcloud, &["config", "get-value", "project"]).ok();
         let token = RwLock::new(Self::fetch_token(&gcloud)?);

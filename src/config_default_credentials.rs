@@ -7,7 +7,7 @@ use hyper::header::CONTENT_TYPE;
 use hyper::{Method, Request};
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-use tracing::{instrument, Level};
+use tracing::{debug, instrument, Level};
 
 use crate::types::{HttpClient, Token};
 use crate::{Error, TokenProvider};
@@ -21,7 +21,7 @@ pub(crate) struct ConfigDefaultCredentials {
 
 impl ConfigDefaultCredentials {
     pub(crate) async fn new(client: &HttpClient) -> Result<Self, Error> {
-        tracing::debug!("try to load credentials from {}", USER_CREDENTIALS_PATH);
+        debug!("try to load credentials from {}", USER_CREDENTIALS_PATH);
         let mut home = home::home_dir().ok_or(Error::Str("home directory not found"))?;
         home.push(USER_CREDENTIALS_PATH);
 
@@ -30,7 +30,7 @@ impl ConfigDefaultCredentials {
         let credentials = serde_json::from_reader::<_, UserCredentials>(file)
             .map_err(|err| Error::Json("failed to deserialize UserCredentials", err))?;
 
-        tracing::debug!(project = ?credentials.quota_project_id, client = credentials.client_id, "found user credentials");
+        debug!(project = ?credentials.quota_project_id, client = credentials.client_id, "found user credentials");
 
         Ok(Self {
             client: client.clone(),

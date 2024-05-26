@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use hyper::body::Body;
 use hyper::{Method, Request};
 use tokio::sync::RwLock;
-use tracing::{instrument, Level};
+use tracing::{debug, instrument, Level};
 
 use crate::types::{HttpClient, Token};
 use crate::{Error, TokenProvider};
@@ -19,10 +19,10 @@ pub(crate) struct MetadataServiceAccount {
 
 impl MetadataServiceAccount {
     pub(crate) async fn new(client: &HttpClient) -> Result<Self, Error> {
-        tracing::debug!("try to fetch token from GCP instance metadata server");
+        debug!("try to fetch token from GCP instance metadata server");
         let token = RwLock::new(Self::fetch_token(client).await?);
 
-        tracing::debug!("getting project ID from GCP instance metadata server");
+        debug!("getting project ID from GCP instance metadata server");
         let req = metadata_request(DEFAULT_PROJECT_ID_GCP_URI);
         let body = client.request(req, "MetadataServiceAccount").await?;
         let project_id = match str::from_utf8(&body) {

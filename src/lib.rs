@@ -89,7 +89,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use thiserror::Error;
-use tracing::{instrument, Level};
+use tracing::{debug, instrument, Level};
 
 mod custom_service_account;
 pub use custom_service_account::CustomServiceAccount;
@@ -121,7 +121,7 @@ pub use types::{Signer, Token};
 ///    `gcloud auth print-access-token` command as the token source.
 #[instrument(level = Level::DEBUG)]
 pub async fn provider() -> Result<Arc<dyn TokenProvider>, Error> {
-    tracing::debug!("initializing gcp_auth");
+    debug!("initializing gcp_auth");
     if let Some(provider) = CustomServiceAccount::from_env()? {
         return Ok(Arc::new(provider));
     }
@@ -129,7 +129,7 @@ pub async fn provider() -> Result<Arc<dyn TokenProvider>, Error> {
     let client = HttpClient::new()?;
     let default_user_error = match ConfigDefaultCredentials::new(&client).await {
         Ok(provider) => {
-            tracing::debug!("using ConfigDefaultCredentials");
+            debug!("using ConfigDefaultCredentials");
             return Ok(Arc::new(provider));
         }
         Err(e) => e,
@@ -137,7 +137,7 @@ pub async fn provider() -> Result<Arc<dyn TokenProvider>, Error> {
 
     let default_service_error = match MetadataServiceAccount::new(&client).await {
         Ok(provider) => {
-            tracing::debug!("using MetadataServiceAccount");
+            debug!("using MetadataServiceAccount");
             return Ok(Arc::new(provider));
         }
         Err(e) => e,
@@ -145,7 +145,7 @@ pub async fn provider() -> Result<Arc<dyn TokenProvider>, Error> {
 
     let gcloud_error = match GCloudAuthorizedUser::new().await {
         Ok(provider) => {
-            tracing::debug!("using GCloudAuthorizedUser");
+            debug!("using GCloudAuthorizedUser");
             return Ok(Arc::new(provider));
         }
         Err(e) => e,
