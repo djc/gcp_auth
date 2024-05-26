@@ -30,6 +30,8 @@ impl ConfigDefaultCredentials {
         let credentials = serde_json::from_reader::<_, UserCredentials>(file)
             .map_err(|err| Error::Json("failed to deserialize UserCredentials", err))?;
 
+        tracing::debug!(project = ?credentials.quota_project_id, client = credentials.client_id, "found user credentials");
+
         Ok(Self {
             client: client.clone(),
             token: RwLock::new(Self::fetch_token(&credentials, client).await?),

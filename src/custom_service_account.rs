@@ -61,6 +61,7 @@ impl CustomServiceAccount {
     }
 
     fn new(credentials: ApplicationCredentials, client: HttpClient) -> Result<Self, Error> {
+        tracing::debug!(project = ?credentials.project_id, email = credentials.client_email, "found credentials");
         Ok(Self {
             client,
             signer: Signer::new(&credentials.private_key)?,
