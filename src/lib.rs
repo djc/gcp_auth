@@ -95,13 +95,13 @@ mod custom_service_account;
 pub use custom_service_account::CustomServiceAccount;
 
 mod config_default_credentials;
-use config_default_credentials::ConfigDefaultCredentials;
+pub use config_default_credentials::ConfigDefaultCredentials;
 
 mod metadata_service_account;
-use metadata_service_account::MetadataServiceAccount;
+pub use metadata_service_account::MetadataServiceAccount;
 
 mod gcloud_authorized_user;
-use gcloud_authorized_user::GCloudAuthorizedUser;
+pub use gcloud_authorized_user::GCloudAuthorizedUser;
 
 mod types;
 use types::HttpClient;
@@ -127,7 +127,7 @@ pub async fn provider() -> Result<Arc<dyn TokenProvider>, Error> {
     }
 
     let client = HttpClient::new()?;
-    let default_user_error = match ConfigDefaultCredentials::new(&client).await {
+    let default_user_error = match ConfigDefaultCredentials::with_client(&client).await {
         Ok(provider) => {
             debug!("using ConfigDefaultCredentials");
             return Ok(Arc::new(provider));
@@ -135,7 +135,7 @@ pub async fn provider() -> Result<Arc<dyn TokenProvider>, Error> {
         Err(e) => e,
     };
 
-    let default_service_error = match MetadataServiceAccount::new(&client).await {
+    let default_service_error = match MetadataServiceAccount::with_client(&client).await {
         Ok(provider) => {
             debug!("using MetadataServiceAccount");
             return Ok(Arc::new(provider));

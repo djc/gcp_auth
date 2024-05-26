@@ -11,15 +11,17 @@ use which::which;
 use crate::types::Token;
 use crate::{Error, TokenProvider};
 
+/// A token provider that queries the `gcloud` CLI for access tokens
 #[derive(Debug)]
-pub(crate) struct GCloudAuthorizedUser {
+pub struct GCloudAuthorizedUser {
     gcloud: PathBuf,
     project_id: Option<Arc<str>>,
     token: RwLock<Arc<Token>>,
 }
 
 impl GCloudAuthorizedUser {
-    pub(crate) async fn new() -> Result<Self, Error> {
+    /// Check if `gcloud` is installed and logged in
+    pub async fn new() -> Result<Self, Error> {
         debug!("try to print access token via `gcloud`");
         let gcloud = which("gcloud").map_err(|_| Error::Str("`gcloud` binary not found"))?;
         let project_id = run(&gcloud, &["config", "get-value", "project"]).ok();
