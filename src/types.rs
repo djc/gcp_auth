@@ -270,11 +270,11 @@ impl fmt::Debug for ApplicationCredentials {
         f.debug_struct("ApplicationCredentials")
             .field("client_email", &self.client_email)
             .field("project_id", &self.project_id)
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Clone)]
 pub(crate) struct UserCredentials {
     /// Client id
     pub(crate) client_id: String,
@@ -284,6 +284,15 @@ pub(crate) struct UserCredentials {
     pub(crate) quota_project_id: Option<Arc<str>>,
     /// Refresh Token
     pub(crate) refresh_token: String,
+}
+
+impl fmt::Debug for UserCredentials {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("UserCredentials")
+            .field("client_id", &self.client_id)
+            .field("quota_project_id", &self.quota_project_id)
+            .finish_non_exhaustive()
+    }
 }
 
 /// How many times to attempt to fetch a token from the set credentials token endpoint.
