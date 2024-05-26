@@ -12,16 +12,20 @@ readme = "README.md"
 license = "MIT"
 
 [features]
-default = ["hyper-rustls/rustls-native-certs"]
+default = ["hyper-rustls/rustls-native-certs", "hyper-rustls/ring"]
 webpki-roots = ["hyper-rustls/webpki-roots"]
 
 [dependencies]
 async-trait = "0.1"
 base64 = "0.22"
+bytes = "1"
 chrono = { version = "0.4.31", features = ["serde"] }
 home = "0.5.5"
-hyper = { version = "0.14.2", features = ["client", "runtime", "http2"] }
-hyper-rustls = { version = "0.25", default-features = false, features = ["http1", "http2", "ring", "tokio-runtime"] }
+http = "1"
+http-body-util = "0.1"
+hyper = { version = "1", default-features = false, features = ["client", "http1", "http2"] }
+hyper-rustls = { version = "0.27", default-features = false, features = ["http1", "http2"] }
+hyper-util = { version = "0.1.4", features = ["client-legacy"] }
 ring = "0.17"
 rustls-pemfile = "2"
 serde = { version = "1.0", features = ["derive", "rc"] }

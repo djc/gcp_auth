@@ -2,10 +2,14 @@ use std::fmt;
 use std::sync::Arc;
 use std::time::Duration;
 
+use bytes::Buf;
 use chrono::{DateTime, Utc};
-use hyper::body::{Body, Bytes};
-use hyper::{Client, Request};
+use http_body_util::{BodyExt, Full};
+use hyper::body::Bytes;
+use hyper::Request;
 use hyper_rustls::HttpsConnectorBuilder;
+use hyper_util::client::legacy::Client;
+use hyper_util::rt::TokioExecutor;
 use ring::rand::SystemRandom;
 use ring::signature::{RsaKeyPair, RSA_PKCS1_SHA256};
 use serde::{Deserialize, Deserializer};
@@ -15,7 +19,10 @@ use crate::Error;
 
 #[derive(Clone, Debug)]
 pub(crate) struct HttpClient {
-    inner: Client<hyper_rustls::HttpsConnector<hyper::client::HttpConnector>>,
+    inner: Client<
+        hyper_rustls::HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>,
+        Full<Bytes>,
+    >,
 }
 
 impl HttpClient {
@@ -30,13 +37,14 @@ impl HttpClient {
             })?;
 
         Ok(Self {
-            inner: Client::builder().build::<_, Body>(https.https_or_http().enable_http2().build()),
+            inner: Client::builder(TokioExecutor::new())
+                .build(https.https_or_http().enable_http2().build()),
         })
     }
 
     pub(crate) async fn token(
         &self,
-        request: &impl Fn() -> Request<Body>,
+        request: &impl Fn() -> Request<Full<Bytes>>,
         provider: &'static str,
     ) -> Result<Arc<Token>, Error> {
         let mut retries = 0;
@@ -64,7 +72,7 @@ impl HttpClient {
 
     pub(crate) async fn request(
         &self,
-        req: Request<Body>,
+        req: Request<Full<Bytes>>,
         provider: &'static str,
     ) -> Result<Bytes, Error> {
         debug!(url = ?req.uri(), provider, "requesting token");
@@ -72,13 +80,16 @@ impl HttpClient {
             .inner
             .request(req)
             .await
-            .map_err(|err| Error::Http("HTTP request failed", err))?
+            .map_err(|err| Error::Other("HTTP request failed", Box::new(err)))?
             .into_parts();
 
-        let body = hyper::body::to_bytes(body)
+        let mut body = body
+            .collect()
             .await
-            .map_err(|err| Error::Http("failed to read HTTP response body", err))?;
+            .map_err(|err| Error::Http("failed to read HTTP response body", err))?
+            .aggregate();
 
+        let body = body.copy_to_bytes(body.remaining());
         if !parts.status.is_success() {
             let body = String::from_utf8_lossy(body.as_ref());
             warn!(%body, status = ?parts.status, "token request failed");

@@ -2,7 +2,8 @@ use std::str;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use hyper::body::Body;
+use bytes::Bytes;
+use http_body_util::Full;
 use hyper::{Method, Request};
 use tokio::sync::RwLock;
 use tracing::{debug, instrument, Level};
@@ -85,12 +86,12 @@ impl TokenProvider for MetadataServiceAccount {
     }
 }
 
-fn metadata_request(uri: &str) -> Request<Body> {
+fn metadata_request(uri: &str) -> Request<Full<Bytes>> {
     Request::builder()
         .method(Method::GET)
         .uri(uri)
         .header("Metadata-Flavor", "Google")
-        .body(Body::empty())
+        .body(Full::from(Bytes::new()))
         .unwrap()
 }
 

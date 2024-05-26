@@ -2,7 +2,8 @@ use std::fs;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use hyper::body::Body;
+use bytes::Bytes;
+use http_body_util::Full;
 use hyper::header::CONTENT_TYPE;
 use hyper::{Method, Request};
 use serde::{Deserialize, Serialize};
@@ -57,15 +58,15 @@ impl ConfigDefaultCredentials {
                         .method(Method::POST)
                         .uri(DEFAULT_TOKEN_GCP_URI)
                         .header(CONTENT_TYPE, "application/json")
-                        .body(Body::from(
-                            serde_json::to_string(&RefreshRequest {
+                        .body(Full::from(Bytes::from(
+                            serde_json::to_vec(&RefreshRequest {
                                 client_id: &cred.client_id,
                                 client_secret: &cred.client_secret,
                                 grant_type: "refresh_token",
                                 refresh_token: &cred.refresh_token,
                             })
                             .unwrap(),
-                        ))
+                        )))
                         .unwrap()
                 },
                 "ConfigDefaultCredentials",
