@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -243,7 +243,7 @@ impl ApplicationCredentials {
                     ?path,
                     "reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var"
                 );
-                Self::from_file(PathBuf::from(path))
+                Self::from_file(&path)
             })
             .transpose()
     }
