@@ -6,11 +6,11 @@ use bytes::Bytes;
 use http_body_util::Full;
 use hyper::header::CONTENT_TYPE;
 use hyper::{Method, Request};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tokio::sync::RwLock;
 use tracing::{debug, instrument, Level};
 
-use crate::types::{HttpClient, Token};
+use crate::types::{HttpClient, Token, UserCredentials};
 use crate::{Error, TokenProvider};
 
 /// A token provider that uses the default user credentials
@@ -103,18 +103,6 @@ struct RefreshRequest<'a> {
     client_secret: &'a str,
     grant_type: &'a str,
     refresh_token: &'a str,
-}
-
-#[derive(Deserialize, Debug, Clone)]
-struct UserCredentials {
-    /// Client id
-    pub(crate) client_id: String,
-    /// Client secret
-    pub(crate) client_secret: String,
-    /// Project ID
-    pub(crate) quota_project_id: Option<Arc<str>>,
-    /// Refresh Token
-    pub(crate) refresh_token: String,
 }
 
 const DEFAULT_TOKEN_GCP_URI: &str = "https://accounts.google.com/o/oauth2/token";
