@@ -13,7 +13,7 @@ use hyper::header::CONTENT_TYPE;
 use hyper::Request;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-use tracing::{instrument, Level};
+use tracing::{debug, instrument, Level};
 use url::form_urlencoded;
 
 use crate::types::{HttpClient, Signer, Token};
@@ -37,7 +37,7 @@ pub struct CustomServiceAccount {
 impl CustomServiceAccount {
     /// Check `GOOGLE_APPLICATION_CREDENTIALS` environment variable for a path to JSON credentials
     pub fn from_env() -> Result<Option<Self>, Error> {
-        tracing::debug!("check for GOOGLE_APPLICATION_CREDENTIALS env var");
+        debug!("check for GOOGLE_APPLICATION_CREDENTIALS env var");
         match ApplicationCredentials::from_env()? {
             Some(credentials) => Self::new(credentials, HttpClient::new()?).map(Some),
             None => Ok(None),
@@ -61,7 +61,7 @@ impl CustomServiceAccount {
     }
 
     fn new(credentials: ApplicationCredentials, client: HttpClient) -> Result<Self, Error> {
-        tracing::debug!(project = ?credentials.project_id, email = credentials.client_email, "found credentials");
+        debug!(project = ?credentials.project_id, email = credentials.client_email, "found credentials");
         Ok(Self {
             client,
             signer: Signer::new(&credentials.private_key)?,
@@ -218,7 +218,7 @@ impl ApplicationCredentials {
     fn from_env() -> Result<Option<Self>, Error> {
         env::var_os("GOOGLE_APPLICATION_CREDENTIALS")
             .map(|path| {
-                tracing::debug!(
+                debug!(
                     ?path,
                     "reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var"
                 );

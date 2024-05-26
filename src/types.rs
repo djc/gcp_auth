@@ -9,6 +9,7 @@ use hyper_rustls::HttpsConnectorBuilder;
 use ring::rand::SystemRandom;
 use ring::signature::{RsaKeyPair, RSA_PKCS1_SHA256};
 use serde::{Deserialize, Deserializer};
+use tracing::{debug, warn};
 
 use crate::Error;
 
@@ -46,11 +47,9 @@ impl HttpClient {
                 Err(err) => err,
             };
 
-            tracing::warn!(
+            warn!(
                 ?err,
-                provider,
-                retries,
-                "failed to refresh token, trying again..."
+                provider, retries, "failed to refresh token, trying again..."
             );
 
             retries += 1;
@@ -68,7 +67,7 @@ impl HttpClient {
         req: Request<Body>,
         provider: &'static str,
     ) -> Result<Bytes, Error> {
-        tracing::debug!(url = ?req.uri(), provider, "requesting token");
+        debug!(url = ?req.uri(), provider, "requesting token");
         let (parts, body) = self
             .inner
             .request(req)
@@ -82,7 +81,7 @@ impl HttpClient {
 
         if !parts.status.is_success() {
             let body = String::from_utf8_lossy(body.as_ref());
-            tracing::warn!(%body, status = ?parts.status, "token request failed");
+            warn!(%body, status = ?parts.status, "token request failed");
             return Err(Error::Str("token request failed"));
         }
 
