@@ -12,15 +12,24 @@ use tracing::{debug, instrument, Level};
 use crate::types::{HttpClient, Token};
 use crate::{Error, TokenProvider};
 
+/// A token provider that uses the default user credentials
+///
+/// Reads credentials from `.config/gcloud/application_default_credentials.json`.
 #[derive(Debug)]
-pub(crate) struct ConfigDefaultCredentials {
+pub struct ConfigDefaultCredentials {
     client: HttpClient,
     token: RwLock<Arc<Token>>,
     credentials: UserCredentials,
 }
 
 impl ConfigDefaultCredentials {
-    pub(crate) async fn new(client: &HttpClient) -> Result<Self, Error> {
+    /// Check for user credentials in the default location and try to deserialize them
+    pub async fn new() -> Result<Self, Error> {
+        let client = HttpClient::new()?;
+        Self::with_client(&client).await
+    }
+
+    pub(crate) async fn with_client(client: &HttpClient) -> Result<Self, Error> {
         debug!("try to load credentials from {}", USER_CREDENTIALS_PATH);
         let mut home = home::home_dir().ok_or(Error::Str("home directory not found"))?;
         home.push(USER_CREDENTIALS_PATH);

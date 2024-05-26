@@ -10,15 +10,24 @@ use tracing::{debug, instrument, Level};
 use crate::types::{HttpClient, Token};
 use crate::{Error, TokenProvider};
 
+/// A token provider that queries the GCP instance metadata server for access tokens
+///
+/// See https://cloud.google.com/compute/docs/metadata/predefined-metadata-keys for details.
 #[derive(Debug)]
-pub(crate) struct MetadataServiceAccount {
+pub struct MetadataServiceAccount {
     client: HttpClient,
     project_id: Arc<str>,
     token: RwLock<Arc<Token>>,
 }
 
 impl MetadataServiceAccount {
-    pub(crate) async fn new(client: &HttpClient) -> Result<Self, Error> {
+    /// Check that the GCP instance metadata server is available and try to fetch a token
+    pub async fn new() -> Result<Self, Error> {
+        let client = HttpClient::new()?;
+        Self::with_client(&client).await
+    }
+
+    pub(crate) async fn with_client(client: &HttpClient) -> Result<Self, Error> {
         debug!("try to fetch token from GCP instance metadata server");
         let token = RwLock::new(Self::fetch_token(client).await?);
 
