@@ -105,7 +105,7 @@ struct RefreshRequest<'a> {
     refresh_token: &'a str,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone)]
 struct UserCredentials {
     /// Client id
     pub(crate) client_id: String,
@@ -115,8 +115,6 @@ struct UserCredentials {
     pub(crate) quota_project_id: Option<Arc<str>>,
     /// Refresh Token
     pub(crate) refresh_token: String,
-    /// Type
-    pub(crate) r#type: String,
 }
 
 const DEFAULT_TOKEN_GCP_URI: &str = "https://accounts.google.com/o/oauth2/token";
