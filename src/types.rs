@@ -223,7 +223,7 @@ where
     Ok(Utc::now() + Duration::from_secs(seconds_from_now))
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize)]
 pub(crate) struct ApplicationCredentials {
     /// project_id
     pub(crate) project_id: Option<Arc<str>>,
@@ -274,7 +274,7 @@ impl fmt::Debug for ApplicationCredentials {
     }
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Deserialize)]
 pub(crate) struct UserCredentials {
     /// Client id
     pub(crate) client_id: String,
