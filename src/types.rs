@@ -251,7 +251,7 @@ impl ApplicationCredentials {
     pub(crate) fn from_file(path: impl AsRef<Path>) -> Result<Self, Error> {
         let file = File::open(path.as_ref())
             .map_err(|err| Error::Io("failed to open application credentials file", err))?;
-        serde_json::from_reader::<_, ApplicationCredentials>(file)
+        serde_json::from_reader(file)
             .map_err(|err| Error::Json("failed to deserialize ApplicationCredentials", err))
     }
 }
@@ -260,7 +260,7 @@ impl FromStr for ApplicationCredentials {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        serde_json::from_str::<ApplicationCredentials>(s)
+        serde_json::from_str(s)
             .map_err(|err| Error::Json("failed to deserialize ApplicationCredentials", err))
     }
 }
