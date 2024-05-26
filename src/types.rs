@@ -224,7 +224,7 @@ where
 }
 
 #[derive(Deserialize)]
-pub(crate) struct ApplicationCredentials {
+pub(crate) struct ServiceAccountKey {
     /// project_id
     pub(crate) project_id: Option<Arc<str>>,
     /// private_key
@@ -235,7 +235,7 @@ pub(crate) struct ApplicationCredentials {
     pub(crate) token_uri: String,
 }
 
-impl ApplicationCredentials {
+impl ServiceAccountKey {
     pub(crate) fn from_env() -> Result<Option<Self>, Error> {
         env::var_os("GOOGLE_APPLICATION_CREDENTIALS")
             .map(|path| {
@@ -256,7 +256,7 @@ impl ApplicationCredentials {
     }
 }
 
-impl FromStr for ApplicationCredentials {
+impl FromStr for ServiceAccountKey {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -265,7 +265,7 @@ impl FromStr for ApplicationCredentials {
     }
 }
 
-impl fmt::Debug for ApplicationCredentials {
+impl fmt::Debug for ServiceAccountKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ApplicationCredentials")
             .field("client_email", &self.client_email)
@@ -275,7 +275,7 @@ impl fmt::Debug for ApplicationCredentials {
 }
 
 #[derive(Deserialize)]
-pub(crate) struct UserCredentials {
+pub(crate) struct AuthorizedUserRefreshToken {
     /// Client id
     pub(crate) client_id: String,
     /// Client secret
@@ -286,7 +286,7 @@ pub(crate) struct UserCredentials {
     pub(crate) refresh_token: String,
 }
 
-impl fmt::Debug for UserCredentials {
+impl fmt::Debug for AuthorizedUserRefreshToken {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("UserCredentials")
             .field("client_id", &self.client_id)
