@@ -7,8 +7,9 @@ use std::{env, fmt};
 
 use async_trait::async_trait;
 use base64::{engine::general_purpose::URL_SAFE, Engine};
+use bytes::Bytes;
 use chrono::Utc;
-use hyper::body::Body;
+use http_body_util::Full;
 use hyper::header::CONTENT_TYPE;
 use hyper::Request;
 use serde::{Deserialize, Serialize};
@@ -75,16 +76,20 @@ impl CustomServiceAccount {
     async fn fetch_token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error> {
         let jwt =
             Claims::new(&self.credentials, scopes, self.subject.as_deref()).to_jwt(&self.signer)?;
-        let body = form_urlencoded::Serializer::new(String::new())
-            .extend_pairs(&[("grant_type", GRANT_TYPE), ("assertion", jwt.as_str())])
-            .finish();
+        let body = Bytes::from(
+            form_urlencoded::Serializer::new(String::new())
+                .extend_pairs(&[("grant_type", GRANT_TYPE), ("assertion", jwt.as_str())])
+                .finish()
+                .into_bytes(),
+        );
+
         let token = self
             .client
             .token(
                 &|| {
                     Request::post(&self.credentials.token_uri)
                         .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
-                        .body(Body::from(body.clone()))
+                        .body(Full::from(body.clone()))
                         .unwrap()
                 },
                 "CustomServiceAccount",
