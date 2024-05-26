@@ -15,7 +15,7 @@ use tokio::sync::RwLock;
 use tracing::{debug, instrument, Level};
 use url::form_urlencoded;
 
-use crate::types::{ApplicationCredentials, HttpClient, Signer, Token};
+use crate::types::{HttpClient, ServiceAccountKey, Signer, Token};
 use crate::{Error, TokenProvider};
 
 /// A custom service account containing credentials
@@ -27,7 +27,7 @@ use crate::{Error, TokenProvider};
 #[derive(Debug)]
 pub struct CustomServiceAccount {
     client: HttpClient,
-    credentials: ApplicationCredentials,
+    credentials: ServiceAccountKey,
     signer: Signer,
     tokens: RwLock<HashMap<Vec<String>, Arc<Token>>>,
     subject: Option<String>,
@@ -37,7 +37,7 @@ impl CustomServiceAccount {
     /// Check `GOOGLE_APPLICATION_CREDENTIALS` environment variable for a path to JSON credentials
     pub fn from_env() -> Result<Option<Self>, Error> {
         debug!("check for GOOGLE_APPLICATION_CREDENTIALS env var");
-        match ApplicationCredentials::from_env()? {
+        match ServiceAccountKey::from_env()? {
             Some(credentials) => Self::new(credentials, HttpClient::new()?).map(Some),
             None => Ok(None),
         }
@@ -45,12 +45,12 @@ impl CustomServiceAccount {
 
     /// Read service account credentials from the given JSON file
     pub fn from_file<T: AsRef<Path>>(path: T) -> Result<Self, Error> {
-        Self::new(ApplicationCredentials::from_file(path)?, HttpClient::new()?)
+        Self::new(ServiceAccountKey::from_file(path)?, HttpClient::new()?)
     }
 
     /// Read service account credentials from the given JSON string
     pub fn from_json(s: &str) -> Result<Self, Error> {
-        Self::new(ApplicationCredentials::from_str(s)?, HttpClient::new()?)
+        Self::new(ServiceAccountKey::from_str(s)?, HttpClient::new()?)
     }
 
     /// Set the `subject` to impersonate a user
@@ -59,7 +59,7 @@ impl CustomServiceAccount {
         self
     }
 
-    fn new(credentials: ApplicationCredentials, client: HttpClient) -> Result<Self, Error> {
+    fn new(credentials: ServiceAccountKey, client: HttpClient) -> Result<Self, Error> {
         debug!(project = ?credentials.project_id, email = credentials.client_email, "found credentials");
         Ok(Self {
             client,
@@ -156,11 +156,7 @@ pub(crate) struct Claims<'a> {
 }
 
 impl<'a> Claims<'a> {
-    pub(crate) fn new(
-        key: &'a ApplicationCredentials,
-        scopes: &[&str],
-        sub: Option<&'a str>,
-    ) -> Self {
+    pub(crate) fn new(key: &'a ServiceAccountKey, scopes: &[&str], sub: Option<&'a str>) -> Self {
         let mut scope = String::with_capacity(16);
         for (i, s) in scopes.iter().enumerate() {
             if i != 0 {

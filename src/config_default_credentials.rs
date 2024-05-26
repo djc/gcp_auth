@@ -10,7 +10,7 @@ use serde::Serialize;
 use tokio::sync::RwLock;
 use tracing::{debug, instrument, Level};
 
-use crate::types::{HttpClient, Token, UserCredentials};
+use crate::types::{AuthorizedUserRefreshToken, HttpClient, Token};
 use crate::{Error, TokenProvider};
 
 /// A token provider that uses the default user credentials
@@ -20,7 +20,7 @@ use crate::{Error, TokenProvider};
 pub struct ConfigDefaultCredentials {
     client: HttpClient,
     token: RwLock<Arc<Token>>,
-    credentials: UserCredentials,
+    credentials: AuthorizedUserRefreshToken,
 }
 
 impl ConfigDefaultCredentials {
@@ -37,7 +37,7 @@ impl ConfigDefaultCredentials {
 
         let file = fs::File::open(home)
             .map_err(|err| Error::Io("failed to open user credentials path", err))?;
-        let credentials = serde_json::from_reader::<_, UserCredentials>(file)
+        let credentials = serde_json::from_reader::<_, AuthorizedUserRefreshToken>(file)
             .map_err(|err| Error::Json("failed to deserialize UserCredentials", err))?;
 
         debug!(project = ?credentials.quota_project_id, client = credentials.client_id, "found user credentials");
@@ -50,7 +50,10 @@ impl ConfigDefaultCredentials {
     }
 
     #[instrument(level = Level::DEBUG, skip(cred, client))]
-    async fn fetch_token(cred: &UserCredentials, client: &HttpClient) -> Result<Arc<Token>, Error> {
+    async fn fetch_token(
+        cred: &AuthorizedUserRefreshToken,
+        client: &HttpClient,
+    ) -> Result<Arc<Token>, Error> {
         client
             .token(
                 &|| {
