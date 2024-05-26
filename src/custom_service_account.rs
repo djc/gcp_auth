@@ -196,27 +196,16 @@ impl<'a> Claims<'a> {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Deserialize, Clone)]
 pub(crate) struct ApplicationCredentials {
-    pub(crate) r#type: Option<String>,
     /// project_id
     pub(crate) project_id: Option<Arc<str>>,
-    /// private_key_id
-    pub(crate) private_key_id: Option<String>,
     /// private_key
     pub(crate) private_key: String,
     /// client_email
     pub(crate) client_email: String,
-    /// client_id
-    pub(crate) client_id: Option<String>,
-    /// auth_uri
-    pub(crate) auth_uri: Option<String>,
     /// token_uri
     pub(crate) token_uri: String,
-    /// auth_provider_x509_cert_url
-    pub(crate) auth_provider_x509_cert_url: Option<String>,
-    /// client_x509_cert_url
-    pub(crate) client_x509_cert_url: Option<String>,
 }
 
 impl ApplicationCredentials {
