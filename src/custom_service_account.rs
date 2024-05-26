@@ -1,9 +1,7 @@
 use std::collections::HashMap;
-use std::fs::File;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::{env, fmt};
 
 use async_trait::async_trait;
 use base64::{engine::general_purpose::URL_SAFE, Engine};
@@ -12,12 +10,12 @@ use chrono::Utc;
 use http_body_util::Full;
 use hyper::header::CONTENT_TYPE;
 use hyper::Request;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tokio::sync::RwLock;
 use tracing::{debug, instrument, Level};
 use url::form_urlencoded;
 
-use crate::types::{HttpClient, Signer, Token};
+use crate::types::{ApplicationCredentials, HttpClient, Signer, Token};
 use crate::{Error, TokenProvider};
 
 /// A custom service account containing credentials
@@ -193,57 +191,6 @@ impl<'a> Claims<'a> {
         jwt.push('.');
         URL_SAFE.encode_string(&signature, &mut jwt);
         Ok(jwt)
-    }
-}
-
-#[derive(Deserialize, Clone)]
-pub(crate) struct ApplicationCredentials {
-    /// project_id
-    pub(crate) project_id: Option<Arc<str>>,
-    /// private_key
-    pub(crate) private_key: String,
-    /// client_email
-    pub(crate) client_email: String,
-    /// token_uri
-    pub(crate) token_uri: String,
-}
-
-impl ApplicationCredentials {
-    fn from_env() -> Result<Option<Self>, Error> {
-        env::var_os("GOOGLE_APPLICATION_CREDENTIALS")
-            .map(|path| {
-                debug!(
-                    ?path,
-                    "reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var"
-                );
-                Self::from_file(PathBuf::from(path))
-            })
-            .transpose()
-    }
-
-    fn from_file(path: impl AsRef<Path>) -> Result<Self, Error> {
-        let file = File::open(path.as_ref())
-            .map_err(|err| Error::Io("failed to open application credentials file", err))?;
-        serde_json::from_reader::<_, ApplicationCredentials>(file)
-            .map_err(|err| Error::Json("failed to deserialize ApplicationCredentials", err))
-    }
-}
-
-impl FromStr for ApplicationCredentials {
-    type Err = Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        serde_json::from_str::<ApplicationCredentials>(s)
-            .map_err(|err| Error::Json("failed to deserialize ApplicationCredentials", err))
-    }
-}
-
-impl fmt::Debug for ApplicationCredentials {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ApplicationCredentials")
-            .field("client_email", &self.client_email)
-            .field("project_id", &self.project_id)
-            .finish()
     }
 }
 

@@ -1,6 +1,9 @@
-use std::fmt;
+use std::fs::File;
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
+use std::{env, fmt};
 
 use bytes::Buf;
 use chrono::{DateTime, Utc};
@@ -218,6 +221,69 @@ where
 {
     let seconds_from_now: u64 = Deserialize::deserialize(deserializer)?;
     Ok(Utc::now() + Duration::from_secs(seconds_from_now))
+}
+
+#[derive(Deserialize, Clone)]
+pub(crate) struct ApplicationCredentials {
+    /// project_id
+    pub(crate) project_id: Option<Arc<str>>,
+    /// private_key
+    pub(crate) private_key: String,
+    /// client_email
+    pub(crate) client_email: String,
+    /// token_uri
+    pub(crate) token_uri: String,
+}
+
+impl ApplicationCredentials {
+    pub(crate) fn from_env() -> Result<Option<Self>, Error> {
+        env::var_os("GOOGLE_APPLICATION_CREDENTIALS")
+            .map(|path| {
+                debug!(
+                    ?path,
+                    "reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var"
+                );
+                Self::from_file(PathBuf::from(path))
+            })
+            .transpose()
+    }
+
+    pub(crate) fn from_file(path: impl AsRef<Path>) -> Result<Self, Error> {
+        let file = File::open(path.as_ref())
+            .map_err(|err| Error::Io("failed to open application credentials file", err))?;
+        serde_json::from_reader::<_, ApplicationCredentials>(file)
+            .map_err(|err| Error::Json("failed to deserialize ApplicationCredentials", err))
+    }
+}
+
+impl FromStr for ApplicationCredentials {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        serde_json::from_str::<ApplicationCredentials>(s)
+            .map_err(|err| Error::Json("failed to deserialize ApplicationCredentials", err))
+    }
+}
+
+impl fmt::Debug for ApplicationCredentials {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ApplicationCredentials")
+            .field("client_email", &self.client_email)
+            .field("project_id", &self.project_id)
+            .finish()
+    }
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub(crate) struct UserCredentials {
+    /// Client id
+    pub(crate) client_id: String,
+    /// Client secret
+    pub(crate) client_secret: String,
+    /// Project ID
+    pub(crate) quota_project_id: Option<Arc<str>>,
+    /// Refresh Token
+    pub(crate) refresh_token: String,
 }
 
 /// How many times to attempt to fetch a token from the set credentials token endpoint.
