@@ -20,8 +20,8 @@ impl GCloudAuthorizedUser {
     /// Check if `gcloud` is installed and logged in
     pub async fn new() -> Result<Self, Error> {
         debug!("try to print access token via `gcloud`");
-        let project_id = run(&["config", "get-value", "project"]).ok();
         let token = RwLock::new(Self::fetch_token()?);
+        let project_id = run(&["config", "get-value", "project"]).ok();
         Ok(Self {
             project_id: project_id.map(Arc::from),
             token,
