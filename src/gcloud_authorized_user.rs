@@ -1,4 +1,3 @@
-use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::Arc;
 use std::time::Duration;
@@ -6,7 +5,6 @@ use std::time::Duration;
 use async_trait::async_trait;
 use tokio::sync::RwLock;
 use tracing::{debug, instrument};
-use which::which;
 
 use crate::types::Token;
 use crate::{Error, TokenProvider};
@@ -14,7 +12,6 @@ use crate::{Error, TokenProvider};
 /// A token provider that queries the `gcloud` CLI for access tokens
 #[derive(Debug)]
 pub struct GCloudAuthorizedUser {
-    gcloud: PathBuf,
     project_id: Option<Arc<str>>,
     token: RwLock<Arc<Token>>,
 }
@@ -23,20 +20,18 @@ impl GCloudAuthorizedUser {
     /// Check if `gcloud` is installed and logged in
     pub async fn new() -> Result<Self, Error> {
         debug!("try to print access token via `gcloud`");
-        let gcloud = which("gcloud").map_err(|_| Error::Str("`gcloud` binary not found"))?;
-        let project_id = run(&gcloud, &["config", "get-value", "project"]).ok();
-        let token = RwLock::new(Self::fetch_token(&gcloud)?);
+        let project_id = run(&["config", "get-value", "project"]).ok();
+        let token = RwLock::new(Self::fetch_token()?);
         Ok(Self {
-            gcloud,
             project_id: project_id.map(Arc::from),
             token,
         })
     }
 
-    #[instrument(level = tracing::Level::DEBUG, skip(gcloud))]
-    fn fetch_token(gcloud: &Path) -> Result<Arc<Token>, Error> {
+    #[instrument(level = tracing::Level::DEBUG)]
+    fn fetch_token() -> Result<Arc<Token>, Error> {
         Ok(Arc::new(Token::from_string(
-            run(gcloud, &["auth", "print-access-token", "--quiet"])?,
+            run(&["auth", "print-access-token", "--quiet"])?,
             DEFAULT_TOKEN_DURATION,
         )))
     }
@@ -51,7 +46,7 @@ impl TokenProvider for GCloudAuthorizedUser {
         }
 
         let mut locked = self.token.write().await;
-        let token = Self::fetch_token(&self.gcloud)?;
+        let token = Self::fetch_token()?;
         *locked = token.clone();
         Ok(token)
     }
@@ -63,8 +58,8 @@ impl TokenProvider for GCloudAuthorizedUser {
     }
 }
 
-fn run(gcloud: &Path, cmd: &[&str]) -> Result<String, Error> {
-    let mut command = Command::new(gcloud);
+fn run(cmd: &[&str]) -> Result<String, Error> {
+    let mut command = Command::new("gcloud");
     command.args(cmd);
 
     let mut stdout = match command.output() {
