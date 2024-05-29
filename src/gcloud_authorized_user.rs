@@ -59,7 +59,7 @@ impl TokenProvider for GCloudAuthorizedUser {
 }
 
 fn run(cmd: &[&str]) -> Result<String, Error> {
-    let mut command = Command::new("gcloud");
+    let mut command = Command::new(GCLOUD_CMD);
     command.args(cmd);
 
     let mut stdout = match command.output() {
@@ -74,6 +74,12 @@ fn run(cmd: &[&str]) -> Result<String, Error> {
 
     String::from_utf8(stdout).map_err(|_| Error::Str("output from `gcloud` is not UTF-8"))
 }
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+const GCLOUD_CMD: &str = "gcloud";
+
+#[cfg(target_os = "windows")]
+const GCLOUD_CMD: &str = "gcloud.cmd";
 
 /// The default number of seconds that it takes for a Google Cloud auth token to expire.
 /// This appears to be the default from practical testing, but we have not found evidence
