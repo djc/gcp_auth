@@ -18,7 +18,7 @@ use crate::{Error, TokenProvider};
 /// Reads credentials from `.config/gcloud/application_default_credentials.json` on Linux and MacOS
 /// or from `%APPDATA%/gcloud/application_default_credentials.json` on Windows.
 /// See [GCloud Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials#personal)
-/// for details
+/// for details.
 #[derive(Debug)]
 pub struct ConfigDefaultCredentials {
     client: HttpClient,
@@ -34,10 +34,12 @@ impl ConfigDefaultCredentials {
     }
 
     pub(crate) async fn with_client(client: &HttpClient) -> Result<Self, Error> {
-        let home = get_user_credentials_path()?;
-        debug!("try to load credentials from {:?}", home);
+        debug!("try to load credentials from configuration");
+        let mut config_path = config_dir()?;
+        config_path.push(USER_CREDENTIALS_PATH);
+        debug!(config = config_path.to_str(), "reading configuration file");
 
-        let credentials = AuthorizedUserRefreshToken::from_file(&home)?;
+        let credentials = AuthorizedUserRefreshToken::from_file(&config_path)?;
         debug!(project = ?credentials.quota_project_id, client = credentials.client_id, "found user credentials");
 
         Ok(Self {
@@ -107,22 +109,21 @@ struct RefreshRequest<'a> {
 }
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
-fn get_user_credentials_path() -> Result<PathBuf, Error> {
-    let mut home = home::home_dir().ok_or(Error::Str("home directory not found"));
+fn config_dir() -> Result<PathBuf, Error> {
+    let mut home = home::home_dir().ok_or(Error::Str("home directory not found"))?;
     home.push(CONFIG_DIR);
-    home.push(USER_CREDENTIALS_PATH);
     Ok(home)
 }
 
 #[cfg(target_os = "windows")]
-fn get_user_credentials_path() -> Result<PathBuf, Error> {
+fn config_dir() -> Result<PathBuf, Error> {
     let app_data = std::env::var(ENV_APPDATA)
         .map_err(|_| Error::Str("APPDATA environment variable not found"))?;
-    let mut home = PathBuf::from(app_data);
-    if !home.exists() {
-        return Err(Error::Str("APPDATA directory not found"));
+    let config_path = PathBuf::from(app_data);
+    match config_path.exists() {
+        true => Ok(home),
+        false => Err(Error::Str("APPDATA directory not found")),
     }
-    home.push(USER_CREDENTIALS_PATH);
     Ok(home)
 }
 
