@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -14,7 +15,10 @@ use crate::{Error, TokenProvider};
 
 /// A token provider that uses the default user credentials
 ///
-/// Reads credentials from `.config/gcloud/application_default_credentials.json`.
+/// Reads credentials from `.config/gcloud/application_default_credentials.json` on Linux and MacOS
+/// or from `%APPDATA%/gcloud/application_default_credentials.json` on Windows.
+/// See [GCloud Application Default Credentials](https://cloud.google.com/docs/authentication/application-default-credentials#personal)
+/// for details
 #[derive(Debug)]
 pub struct ConfigDefaultCredentials {
     client: HttpClient,
@@ -30,9 +34,8 @@ impl ConfigDefaultCredentials {
     }
 
     pub(crate) async fn with_client(client: &HttpClient) -> Result<Self, Error> {
-        debug!("try to load credentials from {}", USER_CREDENTIALS_PATH);
-        let mut home = home::home_dir().ok_or(Error::Str("home directory not found"))?;
-        home.push(USER_CREDENTIALS_PATH);
+        let home = get_user_credentials_path()?;
+        debug!("try to load credentials from {:?}", home);
 
         let credentials = AuthorizedUserRefreshToken::from_file(&home)?;
         debug!(project = ?credentials.quota_project_id, client = credentials.client_id, "found user credentials");
@@ -103,5 +106,31 @@ struct RefreshRequest<'a> {
     refresh_token: &'a str,
 }
 
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+fn get_user_credentials_path() -> Result<PathBuf, Error> {
+    let mut home = home::home_dir().ok_or(Error::Str("home directory not found"));
+    home.push(CONFIG_DIR);
+    home.push(USER_CREDENTIALS_PATH);
+    Ok(home)
+}
+
+#[cfg(target_os = "windows")]
+fn get_user_credentials_path() -> Result<PathBuf, Error> {
+    let app_data = std::env::var(ENV_APPDATA)
+        .map_err(|_| Error::Str("APPDATA environment variable not found"))?;
+    let mut home = PathBuf::from(app_data);
+    if !home.exists() {
+        return Err(Error::Str("APPDATA directory not found"));
+    }
+    home.push(USER_CREDENTIALS_PATH);
+    Ok(home)
+}
+
 const DEFAULT_TOKEN_GCP_URI: &str = "https://accounts.google.com/o/oauth2/token";
-const USER_CREDENTIALS_PATH: &str = ".config/gcloud/application_default_credentials.json";
+const USER_CREDENTIALS_PATH: &str = "gcloud/application_default_credentials.json";
+
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+const CONFIG_DIR: &str = ".config";
+
+#[cfg(target_os = "windows")]
+const ENV_APPDATA: &str = "APPDATA";
