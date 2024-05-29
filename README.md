@@ -35,15 +35,13 @@ This crate does not currently support Windows.
 
 ## Simple usage
 
-The default way to use this library is to get instantiate an `AuthenticationManager`. It will
+The default way to use this library is to select the appropriate token provider using `provider()`. It will
 find the appropriate authentication method and use it to retrieve tokens.
 
 ```rust,no_run
-use gcp_auth::AuthenticationManager;
-
-let authentication_manager = AuthenticationManager::new().await?;
+let provider = gcp_auth::provider().await?;
 let scopes = &["https://www.googleapis.com/auth/cloud-platform"];
-let token = authentication_manager.get_token(scopes).await?;
+let token = provider.token(scopes).await?;
 ```
 
 # License
