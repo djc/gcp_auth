@@ -121,10 +121,9 @@ fn config_dir() -> Result<PathBuf, Error> {
         .map_err(|_| Error::Str("APPDATA environment variable not found"))?;
     let config_path = PathBuf::from(app_data);
     match config_path.exists() {
-        true => Ok(home),
+        true => Ok(config_path),
         false => Err(Error::Str("APPDATA directory not found")),
     }
-    Ok(home)
 }
 
 const DEFAULT_TOKEN_GCP_URI: &str = "https://accounts.google.com/o/oauth2/token";
