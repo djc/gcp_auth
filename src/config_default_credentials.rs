@@ -89,6 +89,12 @@ impl TokenProvider for ConfigDefaultCredentials {
         Ok(token)
     }
 
+    async fn email(&self) -> Result<String, Error> {
+        let token = self.token(&[]).await?;
+        let info = self.client.token_info(&token).await?;
+        Ok(info.email)
+    }
+
     async fn project_id(&self) -> Result<Arc<str>, Error> {
         self.credentials
             .quota_project_id

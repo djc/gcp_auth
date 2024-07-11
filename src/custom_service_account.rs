@@ -132,6 +132,10 @@ impl TokenProvider for CustomServiceAccount {
         return Ok(token);
     }
 
+    async fn email(&self) -> Result<String, Error> {
+        Ok(self.credentials.client_email.clone())
+    }
+
     async fn project_id(&self) -> Result<Arc<str>, Error> {
         match &self.credentials.project_id {
             Some(pid) => Ok(pid.clone()),

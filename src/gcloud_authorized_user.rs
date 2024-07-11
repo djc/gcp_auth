@@ -51,6 +51,10 @@ impl TokenProvider for GCloudAuthorizedUser {
         Ok(token)
     }
 
+    async fn email(&self) -> Result<String, Error> {
+        run(&["auth", "print-identity-token"])
+    }
+
     async fn project_id(&self) -> Result<Arc<str>, Error> {
         self.project_id
             .clone()

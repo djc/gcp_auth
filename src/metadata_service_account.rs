@@ -78,6 +78,15 @@ impl TokenProvider for MetadataServiceAccount {
         Ok(token)
     }
 
+    async fn email(&self) -> Result<String, Error> {
+        let email = self
+            .client
+            .request(metadata_request(DEFAULT_SERVICE_ACCOUNT_EMAIL_URI))
+            .await?;
+
+        String::from_utf8(email.to_vec()).map_err(|_| Error::Str("invalid UTF-8 email"))
+    }
+
     async fn project_id(&self) -> Result<Arc<str>, Error> {
         Ok(self.project_id.clone())
     }
@@ -97,3 +106,5 @@ const DEFAULT_PROJECT_ID_GCP_URI: &str =
     "http://metadata.google.internal/computeMetadata/v1/project/project-id";
 const DEFAULT_TOKEN_GCP_URI: &str =
     "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token";
+const DEFAULT_SERVICE_ACCOUNT_EMAIL_URI: &str =
+    "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email";
