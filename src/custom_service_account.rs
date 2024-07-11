@@ -70,7 +70,7 @@ impl CustomServiceAccount {
         })
     }
 
-    #[instrument(level = Level::DEBUG, skip(self))]
+    #[instrument(level = Level::DEBUG, skip(self), fields(provider = "CustomServiceAccount"))]
     async fn fetch_token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error> {
         let jwt =
             Claims::new(&self.credentials, scopes, self.subject.as_deref()).to_jwt(&self.signer)?;
@@ -83,15 +83,12 @@ impl CustomServiceAccount {
 
         let token = self
             .client
-            .token(
-                &|| {
-                    Request::post(&self.credentials.token_uri)
-                        .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
-                        .body(Full::from(body.clone()))
-                        .unwrap()
-                },
-                "CustomServiceAccount",
-            )
+            .token(&|| {
+                Request::post(&self.credentials.token_uri)
+                    .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+                    .body(Full::from(body.clone()))
+                    .unwrap()
+            })
             .await?;
 
         Ok(token)

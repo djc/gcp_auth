@@ -28,7 +28,7 @@ impl GCloudAuthorizedUser {
         })
     }
 
-    #[instrument(level = tracing::Level::DEBUG)]
+    #[instrument(level = tracing::Level::DEBUG, fields(provider = "GCloudAuthorizedUser"))]
     fn fetch_token() -> Result<Arc<Token>, Error> {
         Ok(Arc::new(Token::from_string(
             run(&["auth", "print-access-token", "--quiet"])?,

@@ -34,7 +34,7 @@ impl MetadataServiceAccount {
 
         debug!("getting project ID from GCP instance metadata server");
         let req = metadata_request(DEFAULT_PROJECT_ID_GCP_URI);
-        let body = client.request(req, "MetadataServiceAccount").await?;
+        let body = client.request(req).await?;
         let project_id = match str::from_utf8(&body) {
             Ok(s) if !s.is_empty() => Arc::from(s),
             Ok(_) => {
@@ -56,13 +56,10 @@ impl MetadataServiceAccount {
         })
     }
 
-    #[instrument(level = Level::DEBUG, skip(client))]
+    #[instrument(level = Level::DEBUG, skip(client), fields(provider = "MetadataServiceAccount"))]
     async fn fetch_token(client: &HttpClient) -> Result<Arc<Token>, Error> {
         client
-            .token(
-                &|| metadata_request(DEFAULT_TOKEN_GCP_URI),
-                "MetadataServiceAccount",
-            )
+            .token(&|| metadata_request(DEFAULT_TOKEN_GCP_URI))
             .await
     }
 }

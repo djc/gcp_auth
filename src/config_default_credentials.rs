@@ -49,31 +49,28 @@ impl ConfigDefaultCredentials {
         })
     }
 
-    #[instrument(level = Level::DEBUG, skip(cred, client))]
+    #[instrument(level = Level::DEBUG, skip(cred, client), fields(provider = "ConfigDefaultCredentials"))]
     async fn fetch_token(
         cred: &AuthorizedUserRefreshToken,
         client: &HttpClient,
     ) -> Result<Arc<Token>, Error> {
         client
-            .token(
-                &|| {
-                    Request::builder()
-                        .method(Method::POST)
-                        .uri(DEFAULT_TOKEN_GCP_URI)
-                        .header(CONTENT_TYPE, "application/json")
-                        .body(Full::from(Bytes::from(
-                            serde_json::to_vec(&RefreshRequest {
-                                client_id: &cred.client_id,
-                                client_secret: &cred.client_secret,
-                                grant_type: "refresh_token",
-                                refresh_token: &cred.refresh_token,
-                            })
-                            .unwrap(),
-                        )))
-                        .unwrap()
-                },
-                "ConfigDefaultCredentials",
-            )
+            .token(&|| {
+                Request::builder()
+                    .method(Method::POST)
+                    .uri(DEFAULT_TOKEN_GCP_URI)
+                    .header(CONTENT_TYPE, "application/json")
+                    .body(Full::from(Bytes::from(
+                        serde_json::to_vec(&RefreshRequest {
+                            client_id: &cred.client_id,
+                            client_secret: &cred.client_secret,
+                            grant_type: "refresh_token",
+                            refresh_token: &cred.refresh_token,
+                        })
+                        .unwrap(),
+                    )))
+                    .unwrap()
+            })
             .await
     }
 }

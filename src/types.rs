@@ -48,20 +48,16 @@ impl HttpClient {
     pub(crate) async fn token(
         &self,
         request: &impl Fn() -> Request<Full<Bytes>>,
-        provider: &'static str,
     ) -> Result<Arc<Token>, Error> {
         let mut retries = 0;
         let body = loop {
-            let err = match self.request(request(), provider).await {
+            let err = match self.request(request()).await {
                 // Early return when the request succeeds
                 Ok(body) => break body,
                 Err(err) => err,
             };
 
-            warn!(
-                ?err,
-                provider, retries, "failed to refresh token, trying again..."
-            );
+            warn!(?err, retries, "failed to refresh token, trying again...");
 
             retries += 1;
             if retries >= RETRY_COUNT {
@@ -73,12 +69,8 @@ impl HttpClient {
             .map_err(|err| Error::Json("failed to deserialize token from response", err))
     }
 
-    pub(crate) async fn request(
-        &self,
-        req: Request<Full<Bytes>>,
-        provider: &'static str,
-    ) -> Result<Bytes, Error> {
-        debug!(url = ?req.uri(), provider, "requesting token");
+    pub(crate) async fn request(&self, req: Request<Full<Bytes>>) -> Result<Bytes, Error> {
+        debug!(url = ?req.uri(), "requesting token");
         let (parts, body) = self
             .inner
             .request(req)
