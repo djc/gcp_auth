@@ -181,7 +181,7 @@ impl<'a> Claims<'a> {
         let mut jwt = String::new();
         URL_SAFE.encode_string(GOOGLE_RS256_HEAD, &mut jwt);
         jwt.push('.');
-        URL_SAFE.encode_string(&serde_json::to_string(self).unwrap(), &mut jwt);
+        URL_SAFE.encode_string(serde_json::to_string(self).unwrap(), &mut jwt);
 
         let signature = signer.sign(jwt.as_bytes())?;
         jwt.push('.');
