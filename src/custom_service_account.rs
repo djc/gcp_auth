@@ -80,8 +80,13 @@ impl CustomServiceAccount {
 
     #[instrument(level = Level::DEBUG, skip(self))]
     async fn fetch_token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error> {
-        let jwt =
-            Claims::new(&self.credentials, scopes, self.subject.as_deref(), self.audience.as_deref()).to_jwt(&self.signer)?;
+        let jwt = Claims::new(
+            &self.credentials,
+            scopes,
+            self.subject.as_deref(),
+            self.audience.as_deref(),
+        )
+        .to_jwt(&self.signer)?;
         let body = Bytes::from(
             form_urlencoded::Serializer::new(String::new())
                 .extend_pairs(&[("grant_type", GRANT_TYPE), ("assertion", jwt.as_str())])
@@ -164,7 +169,12 @@ pub(crate) struct Claims<'a> {
 }
 
 impl<'a> Claims<'a> {
-    pub(crate) fn new(key: &'a ServiceAccountKey, scopes: &[&str], sub: Option<&'a str>, aud: Option<&'a str>) -> Self {
+    pub(crate) fn new(
+        key: &'a ServiceAccountKey,
+        scopes: &[&str],
+        sub: Option<&'a str>,
+        aud: Option<&'a str>,
+    ) -> Self {
         let mut scope = String::with_capacity(16);
         for (i, s) in scopes.iter().enumerate() {
             if i != 0 {
