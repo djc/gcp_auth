@@ -31,6 +31,7 @@ pub struct CustomServiceAccount {
     signer: Signer,
     tokens: RwLock<HashMap<Vec<String>, Arc<Token>>>,
     subject: Option<String>,
+    audience: Option<String>,
 }
 
 impl CustomServiceAccount {
@@ -59,6 +60,12 @@ impl CustomServiceAccount {
         self
     }
 
+    /// Set the `Audience` to impersonate a user
+    pub fn with_audience(mut self, audience: String) -> Self {
+        self.audience = Some(audience);
+        self
+    }
+
     fn new(credentials: ServiceAccountKey, client: HttpClient) -> Result<Self, Error> {
         debug!(project = ?credentials.project_id, email = credentials.client_email, "found credentials");
         Ok(Self {
@@ -67,13 +74,14 @@ impl CustomServiceAccount {
             credentials,
             tokens: RwLock::new(HashMap::new()),
             subject: None,
+            audience: None,
         })
     }
 
     #[instrument(level = Level::DEBUG, skip(self))]
     async fn fetch_token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error> {
         let jwt =
-            Claims::new(&self.credentials, scopes, self.subject.as_deref()).to_jwt(&self.signer)?;
+            Claims::new(&self.credentials, scopes, self.subject.as_deref(), self.audience.as_deref()).to_jwt(&self.signer)?;
         let body = Bytes::from(
             form_urlencoded::Serializer::new(String::new())
                 .extend_pairs(&[("grant_type", GRANT_TYPE), ("assertion", jwt.as_str())])
@@ -156,7 +164,7 @@ pub(crate) struct Claims<'a> {
 }
 
 impl<'a> Claims<'a> {
-    pub(crate) fn new(key: &'a ServiceAccountKey, scopes: &[&str], sub: Option<&'a str>) -> Self {
+    pub(crate) fn new(key: &'a ServiceAccountKey, scopes: &[&str], sub: Option<&'a str>, aud: Option<&'a str>) -> Self {
         let mut scope = String::with_capacity(16);
         for (i, s) in scopes.iter().enumerate() {
             if i != 0 {
@@ -167,9 +175,14 @@ impl<'a> Claims<'a> {
         }
 
         let iat = Utc::now().timestamp();
+        let aud = if let Some(aud_str) = aud {
+            aud_str
+        } else {
+            &key.token_uri
+        };
         Claims {
             iss: &key.client_email,
-            aud: &key.token_uri,
+            aud,
             exp: iat + 3600 - 5, // Max validity is 1h
             iat,
             sub,
