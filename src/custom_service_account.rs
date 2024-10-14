@@ -185,14 +185,9 @@ impl<'a> Claims<'a> {
         }
 
         let iat = Utc::now().timestamp();
-        let aud = if let Some(aud_str) = aud {
-            aud_str
-        } else {
-            &key.token_uri
-        };
         Claims {
             iss: &key.client_email,
-            aud,
+            aud: aud.unwrap_or(&key.token_uri),
             exp: iat + 3600 - 5, // Max validity is 1h
             iat,
             sub,
