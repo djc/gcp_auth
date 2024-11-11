@@ -30,7 +30,7 @@ ring = "0.17"
 rustls-pemfile = "2"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
-thiserror = "1.0"
+thiserror = "2.0"
 tokio = { version = "1.1", features = ["fs", "sync"] }
 tracing = "0.1.29"
 tracing-futures = "0.2.5"
