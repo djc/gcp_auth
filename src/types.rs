@@ -66,9 +66,9 @@ impl HttpClient {
             retries += 1;
             if retries >= RETRY_COUNT {
                 return Err(err);
-            } else {
-                tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
             }
+
+            tokio::time::sleep(Duration::from_millis(200)).await;
         };
 
         serde_json::from_slice(&body)
