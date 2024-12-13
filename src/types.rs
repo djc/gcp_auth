@@ -16,6 +16,7 @@ use hyper_util::rt::TokioExecutor;
 use ring::rand::SystemRandom;
 use ring::signature::{RsaKeyPair, RSA_PKCS1_SHA256};
 use serde::{Deserialize, Deserializer};
+use tokio::time::sleep;
 use tracing::{debug, warn};
 
 use crate::Error;
@@ -50,7 +51,11 @@ impl HttpClient {
         request: &impl Fn() -> Request<Full<Bytes>>,
         provider: &'static str,
     ) -> Result<Arc<Token>, Error> {
+        //We multiply it by two on every iteration to progressively slow down ourself
+        //At most we will perform 50 + 100 + 200 + 400 wait as we're limited by 4 re-tries
+        let mut sleep_interval = Duration::from_millis(50);
         let mut retries = 0;
+
         let body = loop {
             let err = match self.request(request(), provider).await {
                 // Early return when the request succeeds
@@ -68,7 +73,8 @@ impl HttpClient {
                 return Err(err);
             }
 
-            tokio::time::sleep(Duration::from_millis(200)).await;
+            sleep(sleep_interval).await;
+            sleep_interval *= 2;
         };
 
         serde_json::from_slice(&body)
