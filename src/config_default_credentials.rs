@@ -108,14 +108,14 @@ struct RefreshRequest<'a> {
     refresh_token: &'a str,
 }
 
-#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[cfg(target_family = "unix")]
 fn config_dir() -> Result<PathBuf, Error> {
     let mut home = home::home_dir().ok_or(Error::Str("home directory not found"))?;
     home.push(CONFIG_DIR);
     Ok(home)
 }
 
-#[cfg(target_os = "windows")]
+#[cfg(target_family = "windows")]
 fn config_dir() -> Result<PathBuf, Error> {
     let app_data = std::env::var(ENV_APPDATA)
         .map_err(|_| Error::Str("APPDATA environment variable not found"))?;
@@ -129,8 +129,8 @@ fn config_dir() -> Result<PathBuf, Error> {
 const DEFAULT_TOKEN_GCP_URI: &str = "https://accounts.google.com/o/oauth2/token";
 const USER_CREDENTIALS_PATH: &str = "gcloud/application_default_credentials.json";
 
-#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[cfg(target_family = "unix")]
 const CONFIG_DIR: &str = ".config";
 
-#[cfg(target_os = "windows")]
+#[cfg(target_family = "windows")]
 const ENV_APPDATA: &str = "APPDATA";
