@@ -75,10 +75,10 @@ fn run(cmd: &[&str]) -> Result<String, Error> {
     String::from_utf8(stdout).map_err(|_| Error::Str("output from `gcloud` is not UTF-8"))
 }
 
-#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[cfg(target_family = "unix")]
 const GCLOUD_CMD: &str = "gcloud";
 
-#[cfg(target_os = "windows")]
+#[cfg(target_family = "windows")]
 const GCLOUD_CMD: &str = "gcloud.cmd";
 
 /// The default number of seconds that it takes for a Google Cloud auth token to expire.
