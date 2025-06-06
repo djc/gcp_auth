@@ -1,7 +1,6 @@
 [licenses]
-allow-osi-fsf-free = "either"
-copyleft = "deny"
-allow = ["MPL-2.0"]
+version = 2
+allow = ["Apache-2.0", "BSD-3-Clause", "CDLA-Permissive-2.0", "ISC", "MIT", "Unicode-3.0"]
 
 [[licenses.clarify]]
 name = "ring"
