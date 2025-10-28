@@ -1,3 +1,5 @@
+#[cfg(target_family = "unix")]
+use std::env;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -110,7 +112,7 @@ struct RefreshRequest<'a> {
 
 #[cfg(target_family = "unix")]
 fn config_dir() -> Result<PathBuf, Error> {
-    let mut home = home::home_dir().ok_or(Error::Str("home directory not found"))?;
+    let mut home = env::home_dir().ok_or(Error::Str("home directory not found"))?;
     home.push(CONFIG_DIR);
     Ok(home)
 }
