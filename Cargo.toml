@@ -1,6 +1,6 @@
 [package]
 name = "gcp_auth"
-version = "0.12.3"
+version = "0.12.4"
 edition = "2021"
 rust-version = "1.82"
 repository = "https://github.com/hrvolapeter/gcp_auth"
