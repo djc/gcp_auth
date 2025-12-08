@@ -24,7 +24,7 @@ http = "1"
 http-body-util = "0.1"
 hyper = { version = "1", default-features = false, features = ["client", "http1", "http2"] }
 hyper-rustls = { version = "0.27", default-features = false, features = ["http1", "http2"] }
-hyper-util = { version = "0.1.4", features = ["client-legacy"] }
+hyper-util = { version = "0.1.19", features = ["client-legacy"] }
 ring = "0.17"
 rustls-pemfile = "2"
 serde = { version = "1.0", features = ["derive", "rc"] }
