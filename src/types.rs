@@ -15,6 +15,8 @@ use hyper_util::client::legacy::Client;
 use hyper_util::rt::TokioExecutor;
 use ring::rand::SystemRandom;
 use ring::signature::{RsaKeyPair, RSA_PKCS1_SHA256};
+use rustls_pki_types::pem::PemObject;
+use rustls_pki_types::PrivatePkcs8KeyDer;
 use serde::{Deserialize, Deserializer};
 use tokio::time::sleep;
 use tracing::{debug, warn};
@@ -185,23 +187,18 @@ pub struct Signer {
 
 impl Signer {
     pub(crate) fn new(pem_pkcs8: &str) -> Result<Self, Error> {
-        let key = match rustls_pemfile::private_key(&mut pem_pkcs8.as_bytes()) {
-            Ok(Some(key)) => key,
-            Ok(None) => {
-                return Err(Error::Str(
-                    "no private key found in credentials private key data",
-                ))
-            }
+        let key = match PrivatePkcs8KeyDer::from_pem_slice(pem_pkcs8.as_bytes()) {
+            Ok(key) => key,
             Err(err) => {
-                return Err(Error::Io(
-                    "failed to read credentials private key data",
-                    err,
+                return Err(Error::Other(
+                    "failed to parse PKCS#8 RSA key pair",
+                    err.into(),
                 ))
             }
         };
 
         Ok(Signer {
-            key: RsaKeyPair::from_pkcs8(key.secret_der())
+            key: RsaKeyPair::from_pkcs8(key.secret_pkcs8_der())
                 .map_err(|_| Error::Str("invalid private key in credentials"))?,
             rng: SystemRandom::new(),
         })
