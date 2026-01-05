@@ -30,11 +30,11 @@ rustls-pki-types = "1"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 thiserror = "2.0"
-tokio = { version = "1.1", features = ["fs", "sync", "time"] }
+tokio = { version = "1.49", features = ["fs", "sync", "time"] }
 tracing = "0.1.29"
 tracing-futures = "0.2.5"
 url = "2"
 
 [dev-dependencies]
-tokio = { version = "1.1", features = ["macros", "parking_lot", "rt-multi-thread"] }
+tokio = { version = "1.49", features = ["macros", "parking_lot", "rt-multi-thread"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
