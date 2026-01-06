@@ -12,7 +12,9 @@ readme = "README.md"
 license = "MIT"
 
 [features]
-default = ["hyper-rustls/rustls-native-certs", "hyper-rustls/ring"]
+default = ["ring"]
+aws-lc-rs = ["hyper-rustls/rustls-native-certs", "hyper-rustls/aws-lc-rs"]
+ring = ["hyper-rustls/rustls-native-certs", "hyper-rustls/ring"]
 webpki-roots = ["hyper-rustls/webpki-roots"]
 
 [dependencies]
