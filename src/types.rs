@@ -354,16 +354,6 @@ pub(crate) struct CredentialSourceFormat {
     pub(crate) subject_token_field_name: Option<String>,
 }
 
-impl ExternalAccountCredentials {
-    #[allow(dead_code)]
-    pub(crate) fn from_file(path: impl AsRef<Path>) -> Result<Self, Error> {
-        let file = File::open(path.as_ref())
-            .map_err(|err| Error::Io("failed to open external account credentials file", err))?;
-        serde_json::from_reader(file)
-            .map_err(|err| Error::Json("failed to deserialize ExternalAccountCredentials", err))
-    }
-}
-
 /// Wrapper enum to detect credential type from GOOGLE_APPLICATION_CREDENTIALS
 #[derive(Deserialize, Debug)]
 #[serde(tag = "type", rename_all = "snake_case")]

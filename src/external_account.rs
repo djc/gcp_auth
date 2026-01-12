@@ -137,11 +137,10 @@ impl ExternalAccount {
                 .into_bytes(),
         );
 
-        let token_url = self.credentials.token_url.clone();
         let response_body = self
             .client
             .request(
-                Request::post(&token_url)
+                Request::post(&self.credentials.token_url)
                     .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
                     .body(Full::from(body))
                     .unwrap(),
@@ -227,15 +226,22 @@ impl ExternalAccount {
 impl TokenProvider for ExternalAccount {
     async fn token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error> {
         let key: Vec<_> = scopes.iter().map(|x| x.to_string()).collect();
-        let token = self.tokens.read().await.get(&key).cloned();
 
-        if let Some(token) = token {
+        // Fast path: check with read lock
+        if let Some(token) = self.tokens.read().await.get(&key).cloned() {
             if !token.has_expired() {
                 return Ok(token);
             }
         }
 
+        // Slow path: acquire write lock and double-check
         let mut locked = self.tokens.write().await;
+        if let Some(token) = locked.get(&key) {
+            if !token.has_expired() {
+                return Ok(token.clone());
+            }
+        }
+
         let token = self.fetch_token(scopes).await?;
         locked.insert(key, token.clone());
         Ok(token)
