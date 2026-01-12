@@ -92,7 +92,10 @@ impl ExternalAccount {
 
         match format {
             Some(f) if f.format_type == "json" => {
-                let field_name = f.subject_token_field_name.as_deref().unwrap_or("access_token");
+                let field_name = f
+                    .subject_token_field_name
+                    .as_deref()
+                    .unwrap_or("access_token");
                 let json: serde_json::Value = serde_json::from_str(&response)
                     .map_err(|err| Error::Json("failed to parse subject token response", err))?;
                 json.get(field_name)
@@ -107,17 +110,27 @@ impl ExternalAccount {
 
     /// Exchange subject token for a GCP access token via STS
     #[instrument(level = Level::DEBUG, skip(self, subject_token))]
-    async fn exchange_token(&self, subject_token: &str, scopes: &[&str]) -> Result<Arc<Token>, Error> {
+    async fn exchange_token(
+        &self,
+        subject_token: &str,
+        scopes: &[&str],
+    ) -> Result<Arc<Token>, Error> {
         let scope = scopes.join(" ");
 
         let body = Bytes::from(
             form_urlencoded::Serializer::new(String::new())
                 .extend_pairs(&[
-                    ("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange"),
+                    (
+                        "grant_type",
+                        "urn:ietf:params:oauth:grant-type:token-exchange",
+                    ),
                     ("audience", &self.credentials.audience),
                     ("subject_token", subject_token),
                     ("subject_token_type", &self.credentials.subject_token_type),
-                    ("requested_token_type", "urn:ietf:params:oauth:token-type:access_token"),
+                    (
+                        "requested_token_type",
+                        "urn:ietf:params:oauth:token-type:access_token",
+                    ),
                     ("scope", &scope),
                 ])
                 .finish()
@@ -144,7 +157,9 @@ impl ExternalAccount {
 
         // If service account impersonation is configured, use the STS token to get an impersonated token
         if let Some(impersonation_url) = &self.credentials.service_account_impersonation_url {
-            return self.impersonate_service_account(impersonation_url, &token, scopes).await;
+            return self
+                .impersonate_service_account(impersonation_url, &token, scopes)
+                .await;
         }
 
         Ok(token)
@@ -172,7 +187,10 @@ impl ExternalAccount {
             .request(
                 Request::post(impersonation_url)
                     .header(CONTENT_TYPE, "application/json")
-                    .header("Authorization", format!("Bearer {}", federated_token.as_str()))
+                    .header(
+                        "Authorization",
+                        format!("Bearer {}", federated_token.as_str()),
+                    )
                     .body(Full::from(body_bytes))
                     .unwrap(),
                 "ExternalAccount/Impersonate",
@@ -192,7 +210,10 @@ impl ExternalAccount {
             })
             .unwrap_or(std::time::Duration::from_secs(3600));
 
-        Ok(Arc::new(Token::from_string(response.access_token, expires_in)))
+        Ok(Arc::new(Token::from_string(
+            response.access_token,
+            expires_in,
+        )))
     }
 
     #[instrument(level = Level::DEBUG, skip(self))]
