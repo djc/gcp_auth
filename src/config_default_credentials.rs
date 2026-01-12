@@ -42,11 +42,19 @@ impl ConfigDefaultCredentials {
         debug!(config = config_path.to_str(), "reading configuration file");
 
         let credentials = AuthorizedUserRefreshToken::from_file(&config_path)?;
+        Self::from_credentials(credentials, client.clone()).await
+    }
+
+    /// Create from pre-parsed credentials
+    pub(crate) async fn from_credentials(
+        credentials: AuthorizedUserRefreshToken,
+        client: HttpClient,
+    ) -> Result<Self, Error> {
         debug!(project = ?credentials.quota_project_id, client = credentials.client_id, "found user credentials");
 
         Ok(Self {
             client: client.clone(),
-            token: RwLock::new(Self::fetch_token(&credentials, client).await?),
+            token: RwLock::new(Self::fetch_token(&credentials, &client).await?),
             credentials,
         })
     }

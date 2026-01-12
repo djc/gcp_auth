@@ -78,6 +78,14 @@ impl CustomServiceAccount {
         })
     }
 
+    /// Create from pre-parsed credentials
+    pub(crate) fn from_credentials(
+        credentials: ServiceAccountKey,
+        client: HttpClient,
+    ) -> Result<Self, Error> {
+        Self::new(credentials, client)
+    }
+
     #[instrument(level = Level::DEBUG, skip(self))]
     async fn fetch_token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error> {
         let jwt = Claims::new(

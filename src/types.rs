@@ -309,6 +309,91 @@ impl fmt::Debug for AuthorizedUserRefreshToken {
     }
 }
 
+/// External account credentials for Workload Identity Federation
+///
+/// This credential type is used when authenticating from external identity providers
+/// (e.g., GitHub Actions OIDC, AWS, Azure) via GCP Workload Identity Federation.
+///
+/// See: https://google.aip.dev/auth/4117
+#[derive(Deserialize, Debug)]
+pub(crate) struct ExternalAccountCredentials {
+    /// The STS audience, identifying the workload identity pool
+    pub(crate) audience: String,
+    /// The token URL for STS token exchange (usually https://sts.googleapis.com/v1/token)
+    pub(crate) token_url: String,
+    /// The type of subject token (e.g., urn:ietf:params:oauth:token-type:jwt)
+    pub(crate) subject_token_type: String,
+    /// Where to get the subject token from
+    pub(crate) credential_source: CredentialSource,
+    /// Optional: URL to impersonate a service account
+    pub(crate) service_account_impersonation_url: Option<String>,
+    /// Optional: Project ID for quota
+    pub(crate) quota_project_id: Option<Arc<str>>,
+}
+
+/// Source of the subject token for external account credentials
+#[derive(Deserialize, Debug)]
+pub(crate) struct CredentialSource {
+    /// Path to file containing the subject token
+    pub(crate) file: Option<String>,
+    /// URL to fetch the subject token from
+    pub(crate) url: Option<String>,
+    /// Headers to include when fetching from URL
+    pub(crate) headers: Option<std::collections::HashMap<String, String>>,
+    /// Format of the credential source response
+    pub(crate) format: Option<CredentialSourceFormat>,
+}
+
+/// Format specification for credential source
+#[derive(Deserialize, Debug)]
+pub(crate) struct CredentialSourceFormat {
+    /// Type of format: "text" or "json"
+    #[serde(rename = "type")]
+    pub(crate) format_type: String,
+    /// For JSON format, the field name containing the token
+    pub(crate) subject_token_field_name: Option<String>,
+}
+
+impl ExternalAccountCredentials {
+    #[allow(dead_code)]
+    pub(crate) fn from_file(path: impl AsRef<Path>) -> Result<Self, Error> {
+        let file = File::open(path.as_ref())
+            .map_err(|err| Error::Io("failed to open external account credentials file", err))?;
+        serde_json::from_reader(file)
+            .map_err(|err| Error::Json("failed to deserialize ExternalAccountCredentials", err))
+    }
+}
+
+/// Wrapper enum to detect credential type from GOOGLE_APPLICATION_CREDENTIALS
+#[derive(Deserialize, Debug)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub(crate) enum CredentialFile {
+    ServiceAccount(ServiceAccountKey),
+    AuthorizedUser(AuthorizedUserRefreshToken),
+    ExternalAccount(ExternalAccountCredentials),
+}
+
+impl CredentialFile {
+    pub(crate) fn from_env() -> Result<Option<Self>, Error> {
+        env::var_os("GOOGLE_APPLICATION_CREDENTIALS")
+            .map(|path| {
+                debug!(
+                    ?path,
+                    "reading credentials file from GOOGLE_APPLICATION_CREDENTIALS env var"
+                );
+                Self::from_file(&path)
+            })
+            .transpose()
+    }
+
+    pub(crate) fn from_file(path: impl AsRef<Path>) -> Result<Self, Error> {
+        let file = File::open(path.as_ref())
+            .map_err(|err| Error::Io("failed to open credentials file", err))?;
+        serde_json::from_reader(file)
+            .map_err(|err| Error::Json("failed to deserialize credentials file", err))
+    }
+}
+
 /// How many times to attempt to fetch a token from the set credentials token endpoint.
 const RETRY_COUNT: u8 = 5;
 

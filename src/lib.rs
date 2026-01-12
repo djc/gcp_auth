@@ -103,8 +103,11 @@ pub use metadata_service_account::MetadataServiceAccount;
 mod gcloud_authorized_user;
 pub use gcloud_authorized_user::GCloudAuthorizedUser;
 
+mod external_account;
+pub use external_account::ExternalAccount;
+
 mod types;
-use types::HttpClient;
+use types::{CredentialFile, HttpClient};
 pub use types::{Signer, Token};
 
 /// Finds a service account provider to get authentication tokens from
@@ -112,7 +115,8 @@ pub use types::{Signer, Token};
 /// Tries the following approaches, in order:
 ///
 /// 1. Check if the `GOOGLE_APPLICATION_CREDENTIALS` environment variable if set;
-///    if so, use a custom service account as the token source.
+///    if so, detect the credential type (service account, authorized user, or external account)
+///    and use the appropriate provider.
 /// 2. Look for credentials in `.config/gcloud/application_default_credentials.json`;
 ///    if found, use these credentials to request refresh tokens.
 /// 3. Send a HTTP request to the internal metadata server to retrieve a token;
@@ -122,11 +126,30 @@ pub use types::{Signer, Token};
 #[instrument(level = Level::DEBUG)]
 pub async fn provider() -> Result<Arc<dyn TokenProvider>, Error> {
     debug!("initializing gcp_auth");
-    if let Some(provider) = CustomServiceAccount::from_env()? {
-        return Ok(Arc::new(provider));
-    }
 
     let client = HttpClient::new()?;
+
+    // Try to read credentials from GOOGLE_APPLICATION_CREDENTIALS
+    if let Some(cred_file) = CredentialFile::from_env()? {
+        match cred_file {
+            CredentialFile::ServiceAccount(key) => {
+                debug!("using CustomServiceAccount from GOOGLE_APPLICATION_CREDENTIALS");
+                let provider = CustomServiceAccount::from_credentials(key, client)?;
+                return Ok(Arc::new(provider));
+            }
+            CredentialFile::AuthorizedUser(user) => {
+                debug!("using ConfigDefaultCredentials from GOOGLE_APPLICATION_CREDENTIALS");
+                let provider = ConfigDefaultCredentials::from_credentials(user, client).await?;
+                return Ok(Arc::new(provider));
+            }
+            CredentialFile::ExternalAccount(external) => {
+                debug!("using ExternalAccount from GOOGLE_APPLICATION_CREDENTIALS");
+                let provider = ExternalAccount::new(external, client)?;
+                return Ok(Arc::new(provider));
+            }
+        }
+    }
+
     let default_user_error = match ConfigDefaultCredentials::with_client(&client).await {
         Ok(provider) => {
             debug!("using ConfigDefaultCredentials");
