@@ -21,7 +21,7 @@ webpki-roots = ["hyper-rustls/webpki-roots"]
 async-trait = "0.1"
 base64 = "0.22"
 bytes = "1"
-chrono = { version = "0.4.31", features = ["serde"] }
+chrono = { version = "0.4.43", features = ["serde"] }
 http = "1"
 http-body-util = "0.1"
 hyper = { version = "1", default-features = false, features = ["client", "http1", "http2"] }
