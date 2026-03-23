@@ -167,6 +167,8 @@ pub trait TokenProvider: Send + Sync {
     /// the current token (for the given scopes) has expired.
     async fn token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error>;
 
+    async fn email(&self) -> Result<String, Error>;
+
     /// Get the project ID for the authentication context
     async fn project_id(&self) -> Result<Arc<str>, Error>;
 }
