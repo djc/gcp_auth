@@ -7,6 +7,7 @@ use std::{env, fmt};
 
 use bytes::Buf;
 use chrono::{DateTime, Utc};
+use http::Method;
 use http_body_util::{BodyExt, Full};
 use hyper::body::Bytes;
 use hyper::Request;
@@ -51,7 +52,6 @@ impl HttpClient {
     pub(crate) async fn token(
         &self,
         request: &impl Fn() -> Request<Full<Bytes>>,
-        provider: &'static str,
     ) -> Result<Arc<Token>, Error> {
         //We multiply it by two on every iteration to progressively slow down ourself
         //At most we will perform 50 + 100 + 200 + 400 wait as we're limited by 4 re-tries
@@ -59,16 +59,13 @@ impl HttpClient {
         let mut retries = 0;
 
         let body = loop {
-            let err = match self.request(request(), provider).await {
+            let err = match self.request(request()).await {
                 // Early return when the request succeeds
                 Ok(body) => break body,
                 Err(err) => err,
             };
 
-            warn!(
-                ?err,
-                provider, retries, "failed to refresh token, trying again..."
-            );
+            warn!(?err, retries, "failed to refresh token, trying again...");
 
             retries += 1;
             if retries >= RETRY_COUNT {
@@ -83,12 +80,27 @@ impl HttpClient {
             .map_err(|err| Error::Json("failed to deserialize token from response", err))
     }
 
-    pub(crate) async fn request(
-        &self,
-        req: Request<Full<Bytes>>,
-        provider: &'static str,
-    ) -> Result<Bytes, Error> {
-        debug!(url = ?req.uri(), provider, "requesting token");
+    pub(crate) async fn token_info(&self, token: &Token) -> Result<TokenInfo, Error> {
+        let req = Request::builder()
+            .method(Method::GET)
+            .uri(format!(
+                "https://oauth2.googleapis.com/tokeninfo?access_token={}",
+                token.as_str()
+            ))
+            .body(Full::from(Bytes::new()))
+            .map_err(|err| Error::Other("failed to build HTTP request", Box::new(err)))?;
+
+        let body = self
+            .request(req)
+            .await
+            .map_err(|err| Error::Other("failed to fetch token info", Box::new(err)))?;
+
+        serde_json::from_slice(&body)
+            .map_err(|err| Error::Json("failed to deserialize token info from response", err))
+    }
+
+    pub(crate) async fn request(&self, req: Request<Full<Bytes>>) -> Result<Bytes, Error> {
+        debug!(url = ?req.uri(), "requesting token");
         let (parts, body) = self
             .inner
             .request(req)
@@ -307,6 +319,11 @@ impl fmt::Debug for AuthorizedUserRefreshToken {
             .field("quota_project_id", &self.quota_project_id)
             .finish_non_exhaustive()
     }
+}
+
+#[derive(Deserialize)]
+pub(crate) struct TokenInfo {
+    pub(crate) email: String,
 }
 
 /// How many times to attempt to fetch a token from the set credentials token endpoint.
