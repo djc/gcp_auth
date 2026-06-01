@@ -13,10 +13,6 @@ use hyper::Request;
 use hyper_rustls::HttpsConnectorBuilder;
 use hyper_util::client::legacy::Client;
 use hyper_util::rt::TokioExecutor;
-use ring::rand::SystemRandom;
-use ring::signature::{RsaKeyPair, RSA_PKCS1_SHA256};
-use rustls_pki_types::pem::PemObject;
-use rustls_pki_types::PrivatePkcs8KeyDer;
 use serde::{Deserialize, Deserializer};
 use tokio::time::sleep;
 use tracing::{debug, warn};
@@ -176,47 +172,6 @@ impl fmt::Debug for Token {
             .field("access_token", &"****")
             .field("expires_at", &self.expires_at)
             .finish()
-    }
-}
-
-/// An RSA PKCS1 SHA256 signer
-pub struct Signer {
-    key: RsaKeyPair,
-    rng: SystemRandom,
-}
-
-impl Signer {
-    pub(crate) fn new(pem_pkcs8: &str) -> Result<Self, Error> {
-        let key = match PrivatePkcs8KeyDer::from_pem_slice(pem_pkcs8.as_bytes()) {
-            Ok(key) => key,
-            Err(err) => {
-                return Err(Error::Other(
-                    "failed to parse PKCS#8 RSA key pair",
-                    err.into(),
-                ))
-            }
-        };
-
-        Ok(Signer {
-            key: RsaKeyPair::from_pkcs8(key.secret_pkcs8_der())
-                .map_err(|_| Error::Str("invalid private key in credentials"))?,
-            rng: SystemRandom::new(),
-        })
-    }
-
-    /// Sign the input message and return the signature
-    pub fn sign(&self, input: &[u8]) -> Result<Vec<u8>, Error> {
-        let mut signature = vec![0; self.key.public().modulus_len()];
-        self.key
-            .sign(&RSA_PKCS1_SHA256, &self.rng, input, &mut signature)
-            .map_err(|_| Error::Str("failed to sign with credentials key"))?;
-        Ok(signature)
-    }
-}
-
-impl fmt::Debug for Signer {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Signer").finish()
     }
 }
 

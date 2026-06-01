@@ -103,9 +103,12 @@ pub use metadata_service_account::MetadataServiceAccount;
 mod gcloud_authorized_user;
 pub use gcloud_authorized_user::GCloudAuthorizedUser;
 
+mod signer;
+pub use signer::Signer;
+
 mod types;
 use types::HttpClient;
-pub use types::{Signer, Token};
+pub use types::Token;
 
 /// Finds a service account provider to get authentication tokens from
 ///
