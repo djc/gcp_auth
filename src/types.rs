@@ -1,9 +1,12 @@
+#[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
+use std::env;
+use std::fmt;
 use std::fs::File;
 use std::path::Path;
+#[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
-use std::{env, fmt};
 
 use bytes::Buf;
 use chrono::{DateTime, Utc};
@@ -13,11 +16,7 @@ use hyper::Request;
 use hyper_rustls::HttpsConnectorBuilder;
 use hyper_util::client::legacy::Client;
 use hyper_util::rt::TokioExecutor;
-use ring::rand::SystemRandom;
-use ring::signature::{RsaKeyPair, RSA_PKCS1_SHA256};
 use rustls::crypto::CryptoProvider;
-use rustls_pki_types::pem::PemObject;
-use rustls_pki_types::PrivatePkcs8KeyDer;
 use serde::{Deserialize, Deserializer};
 use tokio::time::sleep;
 use tracing::{debug, warn};
@@ -206,44 +205,73 @@ impl fmt::Debug for Token {
     }
 }
 
-/// An RSA PKCS1 SHA256 signer
-pub struct Signer {
-    key: RsaKeyPair,
-    rng: SystemRandom,
-}
+#[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
+pub use self::sign::Signer;
 
-impl Signer {
-    pub(crate) fn new(pem_pkcs8: &str) -> Result<Self, Error> {
-        let key = match PrivatePkcs8KeyDer::from_pem_slice(pem_pkcs8.as_bytes()) {
-            Ok(key) => key,
-            Err(err) => {
-                return Err(Error::Other(
-                    "failed to parse PKCS#8 RSA key pair",
-                    err.into(),
-                ))
-            }
-        };
+#[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
+mod sign {
+    use std::fmt;
 
-        Ok(Signer {
-            key: RsaKeyPair::from_pkcs8(key.secret_pkcs8_der())
-                .map_err(|_| Error::Str("invalid private key in credentials"))?,
-            rng: SystemRandom::new(),
-        })
+    #[cfg(all(not(feature = "ring"), feature = "aws-lc-rs"))]
+    use aws_lc_rs::rand::SystemRandom;
+    #[cfg(all(not(feature = "ring"), feature = "aws-lc-rs"))]
+    use aws_lc_rs::signature::{KeyPair, RsaKeyPair, RSA_PKCS1_SHA256};
+    #[cfg(feature = "ring")]
+    use ring::rand::SystemRandom;
+    #[cfg(feature = "ring")]
+    use ring::signature::{RsaKeyPair, RSA_PKCS1_SHA256};
+    use rustls_pki_types::pem::PemObject;
+    use rustls_pki_types::PrivatePkcs8KeyDer;
+
+    use crate::Error;
+
+    /// An RSA PKCS1 SHA256 signer
+    ///
+    /// The signature is created by the enabled crypto provider: `ring` (the
+    /// default) or `aws-lc-rs`. `ring` takes precedence when both are enabled.
+    pub struct Signer {
+        key: RsaKeyPair,
+        rng: SystemRandom,
     }
 
-    /// Sign the input message and return the signature
-    pub fn sign(&self, input: &[u8]) -> Result<Vec<u8>, Error> {
-        let mut signature = vec![0; self.key.public().modulus_len()];
-        self.key
-            .sign(&RSA_PKCS1_SHA256, &self.rng, input, &mut signature)
-            .map_err(|_| Error::Str("failed to sign with credentials key"))?;
-        Ok(signature)
-    }
-}
+    impl Signer {
+        pub(crate) fn new(pem_pkcs8: &str) -> Result<Self, Error> {
+            let key = match PrivatePkcs8KeyDer::from_pem_slice(pem_pkcs8.as_bytes()) {
+                Ok(key) => key,
+                Err(err) => {
+                    return Err(Error::Other(
+                        "failed to parse PKCS#8 RSA key pair",
+                        err.into(),
+                    ))
+                }
+            };
 
-impl fmt::Debug for Signer {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Signer").finish()
+            Ok(Signer {
+                key: RsaKeyPair::from_pkcs8(key.secret_pkcs8_der())
+                    .map_err(|_| Error::Str("invalid private key in credentials"))?,
+                rng: SystemRandom::new(),
+            })
+        }
+
+        /// Sign the input message and return the signature
+        pub fn sign(&self, input: &[u8]) -> Result<Vec<u8>, Error> {
+            #[cfg(feature = "ring")]
+            let modulus_len = self.key.public().modulus_len();
+            #[cfg(all(not(feature = "ring"), feature = "aws-lc-rs"))]
+            let modulus_len = self.key.public_key().modulus_len();
+
+            let mut signature = vec![0; modulus_len];
+            self.key
+                .sign(&RSA_PKCS1_SHA256, &self.rng, input, &mut signature)
+                .map_err(|_| Error::Str("failed to sign with credentials key"))?;
+            Ok(signature)
+        }
+    }
+
+    impl fmt::Debug for Signer {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.debug_struct("Signer").finish()
+        }
     }
 }
 
@@ -255,6 +283,7 @@ where
     Ok(Utc::now() + Duration::from_secs(seconds_from_now))
 }
 
+#[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
 #[derive(Deserialize)]
 pub(crate) struct ServiceAccountKey {
     /// project_id
@@ -267,6 +296,7 @@ pub(crate) struct ServiceAccountKey {
     pub(crate) token_uri: String,
 }
 
+#[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
 impl ServiceAccountKey {
     pub(crate) fn from_env() -> Result<Option<Self>, Error> {
         env::var_os("GOOGLE_APPLICATION_CREDENTIALS")
@@ -288,6 +318,7 @@ impl ServiceAccountKey {
     }
 }
 
+#[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
 impl FromStr for ServiceAccountKey {
     type Err = Error;
 
@@ -297,6 +328,7 @@ impl FromStr for ServiceAccountKey {
     }
 }
 
+#[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
 impl fmt::Debug for ServiceAccountKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ApplicationCredentials")

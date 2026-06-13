@@ -46,8 +46,10 @@
 //! [`CustomServiceAccount`] directly using one of its associated functions:
 //!
 //! ```rust,no_run
+//! # #[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
 //! # use std::path::PathBuf;
 //! #
+//! # #[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
 //! # async fn get_token() -> Result<(), gcp_auth::Error> {
 //! use gcp_auth::{CustomServiceAccount, TokenProvider};
 //!
@@ -91,7 +93,9 @@ use async_trait::async_trait;
 use thiserror::Error;
 use tracing::{debug, instrument, Level};
 
+#[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
 mod custom_service_account;
+#[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
 pub use custom_service_account::CustomServiceAccount;
 
 mod config_default_credentials;
@@ -105,14 +109,17 @@ pub use gcloud_authorized_user::GCloudAuthorizedUser;
 
 mod types;
 use types::HttpClient;
-pub use types::{Signer, Token};
+#[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
+pub use types::Signer;
+pub use types::Token;
 
 /// Finds a service account provider to get authentication tokens from
 ///
 /// Tries the following approaches, in order:
 ///
 /// 1. Check if the `GOOGLE_APPLICATION_CREDENTIALS` environment variable if set;
-///    if so, use a custom service account as the token source.
+///    if so, use a custom service account as the token source (requires one of
+///    the `ring` or `aws-lc-rs` features).
 /// 2. Look for credentials in `.config/gcloud/application_default_credentials.json`;
 ///    if found, use these credentials to request refresh tokens.
 /// 3. Send a HTTP request to the internal metadata server to retrieve a token;
@@ -122,6 +129,7 @@ pub use types::{Signer, Token};
 #[instrument(level = Level::DEBUG)]
 pub async fn provider() -> Result<Arc<dyn TokenProvider>, Error> {
     debug!("initializing gcp_auth");
+    #[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
     if let Some(provider) = CustomServiceAccount::from_env()? {
         return Ok(Arc::new(provider));
     }
