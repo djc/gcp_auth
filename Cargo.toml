@@ -13,12 +13,13 @@ license = "MIT"
 
 [features]
 default = ["ring"]
-aws-lc-rs = ["hyper-rustls/aws-lc-rs"]
-ring = ["hyper-rustls/ring"]
+aws-lc-rs = ["hyper-rustls/aws-lc-rs", "dep:aws-lc-rs"]
+ring = ["hyper-rustls/ring", "dep:ring"]
 webpki-roots = ["hyper-rustls/webpki-roots"]
 
 [dependencies]
 async-trait = "0.1"
+aws-lc-rs = { version = "1", optional = true }
 base64 = "0.22"
 bytes = "1"
 chrono = { version = "0.4.31", features = ["serde"] }
@@ -27,7 +28,7 @@ http-body-util = "0.1"
 hyper = { version = "1", default-features = false, features = ["client", "http1", "http2"] }
 hyper-rustls = { version = "0.27", default-features = false, features = ["http1", "http2", "rustls-native-certs"] }
 hyper-util = { version = "0.1.4", features = ["client-legacy"] }
-ring = "0.17"
+ring = { version = "0.17", optional = true }
 rustls = { version = "0.23", default-features = false, features = ["std"] }
 rustls-pki-types = "1"
 serde = { version = "1.0", features = ["derive", "rc"] }
