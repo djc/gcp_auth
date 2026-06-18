@@ -248,6 +248,7 @@ dependencies = [
  "hyper-rustls",
  "hyper-util",
  "ring",
+ "rustls",
  "rustls-pki-types",
  "serde",
  "serde_json",
