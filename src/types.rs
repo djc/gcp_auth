@@ -15,6 +15,7 @@ use hyper_util::client::legacy::Client;
 use hyper_util::rt::TokioExecutor;
 use ring::rand::SystemRandom;
 use ring::signature::{RsaKeyPair, RSA_PKCS1_SHA256};
+use rustls::crypto::CryptoProvider;
 use rustls_pki_types::pem::PemObject;
 use rustls_pki_types::PrivatePkcs8KeyDer;
 use serde::{Deserialize, Deserializer};
@@ -34,10 +35,12 @@ pub(crate) struct HttpClient {
 impl HttpClient {
     pub(crate) fn new() -> Result<Self, Error> {
         #[cfg(feature = "webpki-roots")]
-        let https = HttpsConnectorBuilder::new().with_webpki_roots();
+        let https = HttpsConnectorBuilder::new()
+            .with_provider_and_webpki_roots(default_provider()?)
+            .map_err(|err| Error::Other("failed to initialize TLS configuration", Box::new(err)))?;
         #[cfg(not(feature = "webpki-roots"))]
         let https = HttpsConnectorBuilder::new()
-            .with_native_roots()
+            .with_provider_and_native_roots(default_provider()?)
             .map_err(|err| {
                 Error::Io("failed to load native TLS root certificates for HTTPS", err)
             })?;
@@ -111,6 +114,30 @@ impl HttpClient {
 
         Ok(body)
     }
+}
+
+/// Returns the bundled `ring` [`CryptoProvider`] backing the TLS configuration.
+#[cfg(feature = "ring")]
+fn default_provider() -> Result<Arc<CryptoProvider>, Error> {
+    Ok(Arc::new(rustls::crypto::ring::default_provider()))
+}
+
+/// Returns the bundled `aws-lc-rs` [`CryptoProvider`] backing the TLS configuration.
+#[cfg(all(not(feature = "ring"), feature = "aws-lc-rs"))]
+fn default_provider() -> Result<Arc<CryptoProvider>, Error> {
+    Ok(Arc::new(rustls::crypto::aws_lc_rs::default_provider()))
+}
+
+/// Returns the per-process default [`CryptoProvider`] backing the TLS configuration.
+///
+/// With no crypto feature enabled, the provider is whatever the application has
+/// installed as the per-process default via [`CryptoProvider::install_default()`].
+#[cfg(not(any(feature = "ring", feature = "aws-lc-rs")))]
+fn default_provider() -> Result<Arc<CryptoProvider>, Error> {
+    CryptoProvider::get_default().cloned().ok_or(Error::Str(
+        "no per-process default crypto provider installed: enable the `ring` or `aws-lc-rs` \
+         feature, or install one with `CryptoProvider::install_default()`",
+    ))
 }
 
 /// Represents an access token that can be used as a bearer token in HTTP requests
