@@ -34,7 +34,7 @@ impl MetadataServiceAccount {
 
         debug!("getting project ID from GCP instance metadata server");
         let req = metadata_request(DEFAULT_PROJECT_ID_GCP_URI);
-        let body = client.request(req, "MetadataServiceAccount").await?;
+        let body = client.request(req).await?;
         let project_id = match str::from_utf8(&body) {
             Ok(s) if !s.is_empty() => Arc::from(s),
             Ok(_) => {
@@ -56,13 +56,10 @@ impl MetadataServiceAccount {
         })
     }
 
-    #[instrument(level = Level::DEBUG, skip(client))]
+    #[instrument(level = Level::DEBUG, skip(client), fields(provider = "MetadataServiceAccount"))]
     async fn fetch_token(client: &HttpClient) -> Result<Arc<Token>, Error> {
         client
-            .token(
-                &|| metadata_request(DEFAULT_TOKEN_GCP_URI),
-                "MetadataServiceAccount",
-            )
+            .token(&|| metadata_request(DEFAULT_TOKEN_GCP_URI))
             .await
     }
 }
@@ -79,6 +76,15 @@ impl TokenProvider for MetadataServiceAccount {
         let token = Self::fetch_token(&self.client).await?;
         *locked = token.clone();
         Ok(token)
+    }
+
+    async fn email(&self) -> Result<String, Error> {
+        let email = self
+            .client
+            .request(metadata_request(DEFAULT_SERVICE_ACCOUNT_EMAIL_URI))
+            .await?;
+
+        String::from_utf8(email.to_vec()).map_err(|_| Error::Str("invalid UTF-8 email"))
     }
 
     async fn project_id(&self) -> Result<Arc<str>, Error> {
@@ -100,3 +106,5 @@ const DEFAULT_PROJECT_ID_GCP_URI: &str =
     "http://metadata.google.internal/computeMetadata/v1/project/project-id";
 const DEFAULT_TOKEN_GCP_URI: &str =
     "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token";
+const DEFAULT_SERVICE_ACCOUNT_EMAIL_URI: &str =
+    "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/email";
