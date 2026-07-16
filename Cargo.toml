@@ -36,7 +36,6 @@ serde_json = "1.0"
 thiserror = "2.0"
 tokio = { version = "1.1", features = ["fs", "sync", "time"] }
 tracing = "0.1.29"
-tracing-futures = "0.2.5"
 url = "2"
 
 [dev-dependencies]
