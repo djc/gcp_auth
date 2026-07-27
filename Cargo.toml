@@ -20,7 +20,7 @@ webpki-roots = ["hyper-rustls/webpki-roots"]
 [dependencies]
 async-trait = "0.1"
 aws-lc-rs = { version = "1", optional = true }
-base64 = "0.22"
+base64 = "0.23"
 bytes = "1"
 chrono = { version = "0.4.31", features = ["serde"] }
 http = "1"
