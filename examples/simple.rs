@@ -8,8 +8,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .unwrap();
 
     let token_provider = gcp_auth::provider().await?;
-    let _token = token_provider
+    let token = token_provider
         .token(&["https://www.googleapis.com/auth/cloud-platform"])
         .await?;
+
+    tracing::info!(email = token_provider.email().await?, token = ?token);
+
     Ok(())
 }
