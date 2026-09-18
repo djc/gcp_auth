@@ -51,31 +51,28 @@ impl ConfigDefaultCredentials {
         })
     }
 
-    #[instrument(level = Level::DEBUG, skip(cred, client))]
+    #[instrument(level = Level::DEBUG, skip(cred, client), fields(provider = "ConfigDefaultCredentials"))]
     async fn fetch_token(
         cred: &AuthorizedUserRefreshToken,
         client: &HttpClient,
     ) -> Result<Arc<Token>, Error> {
         client
-            .token(
-                &|| {
-                    Request::builder()
-                        .method(Method::POST)
-                        .uri(DEFAULT_TOKEN_GCP_URI)
-                        .header(CONTENT_TYPE, "application/json")
-                        .body(Full::from(Bytes::from(
-                            serde_json::to_vec(&RefreshRequest {
-                                client_id: &cred.client_id,
-                                client_secret: &cred.client_secret,
-                                grant_type: "refresh_token",
-                                refresh_token: &cred.refresh_token,
-                            })
-                            .unwrap(),
-                        )))
-                        .unwrap()
-                },
-                "ConfigDefaultCredentials",
-            )
+            .token(&|| {
+                Request::builder()
+                    .method(Method::POST)
+                    .uri(DEFAULT_TOKEN_GCP_URI)
+                    .header(CONTENT_TYPE, "application/json")
+                    .body(Full::from(Bytes::from(
+                        serde_json::to_vec(&RefreshRequest {
+                            client_id: &cred.client_id,
+                            client_secret: &cred.client_secret,
+                            grant_type: "refresh_token",
+                            refresh_token: &cred.refresh_token,
+                        })
+                        .unwrap(),
+                    )))
+                    .unwrap()
+            })
             .await
     }
 }
@@ -92,6 +89,12 @@ impl TokenProvider for ConfigDefaultCredentials {
         let token = Self::fetch_token(&self.credentials, &self.client).await?;
         *locked = token.clone();
         Ok(token)
+    }
+
+    async fn email(&self) -> Result<String, Error> {
+        let token = self.token(&[]).await?;
+        let info = self.client.token_info(&token).await?;
+        Ok(info.email)
     }
 
     async fn project_id(&self) -> Result<Arc<str>, Error> {

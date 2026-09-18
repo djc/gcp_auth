@@ -78,7 +78,7 @@ impl CustomServiceAccount {
         })
     }
 
-    #[instrument(level = Level::DEBUG, skip(self))]
+    #[instrument(level = Level::DEBUG, skip(self), fields(provider = "CustomServiceAccount"))]
     async fn fetch_token(&self, scopes: &[&str]) -> Result<Arc<Token>, Error> {
         let jwt = Claims::new(
             &self.credentials,
@@ -96,15 +96,12 @@ impl CustomServiceAccount {
 
         let token = self
             .client
-            .token(
-                &|| {
-                    Request::post(&self.credentials.token_uri)
-                        .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
-                        .body(Full::from(body.clone()))
-                        .unwrap()
-                },
-                "CustomServiceAccount",
-            )
+            .token(&|| {
+                Request::post(&self.credentials.token_uri)
+                    .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+                    .body(Full::from(body.clone()))
+                    .unwrap()
+            })
             .await?;
 
         Ok(token)
@@ -146,6 +143,10 @@ impl TokenProvider for CustomServiceAccount {
         let token = self.fetch_token(scopes).await?;
         locked.insert(key, token.clone());
         return Ok(token);
+    }
+
+    async fn email(&self) -> Result<String, Error> {
+        Ok(self.credentials.client_email.clone())
     }
 
     async fn project_id(&self) -> Result<Arc<str>, Error> {
