@@ -6,10 +6,10 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use base64::{engine::general_purpose::URL_SAFE, Engine};
 use bytes::Bytes;
-use chrono::Utc;
 use http_body_util::Full;
 use hyper::header::CONTENT_TYPE;
 use hyper::Request;
+use jiff::Timestamp;
 use serde::Serialize;
 use tokio::sync::RwLock;
 use tracing::{debug, instrument, Level};
@@ -184,7 +184,7 @@ impl<'a> Claims<'a> {
             scope.push_str(s);
         }
 
-        let iat = Utc::now().timestamp();
+        let iat = Timestamp::now().as_second();
         Claims {
             iss: &key.client_email,
             aud: aud.unwrap_or(&key.token_uri),
