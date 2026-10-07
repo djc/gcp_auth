@@ -28,7 +28,7 @@ impl GCloudAuthorizedUser {
         })
     }
 
-    #[instrument(level = tracing::Level::DEBUG)]
+    #[instrument(level = tracing::Level::DEBUG, fields(provider = "GCloudAuthorizedUser"))]
     fn fetch_token() -> Result<Arc<Token>, Error> {
         Ok(Arc::new(Token::from_string(
             run(&["auth", "print-access-token", "--quiet"])?,
@@ -49,6 +49,10 @@ impl TokenProvider for GCloudAuthorizedUser {
         let token = Self::fetch_token()?;
         *locked = token.clone();
         Ok(token)
+    }
+
+    async fn email(&self) -> Result<String, Error> {
+        run(&["auth", "print-identity-token"])
     }
 
     async fn project_id(&self) -> Result<Arc<str>, Error> {
