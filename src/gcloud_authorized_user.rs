@@ -88,7 +88,7 @@ pub(crate) const DEFAULT_TOKEN_DURATION: Duration = Duration::from_secs(3600);
 
 #[cfg(test)]
 mod tests {
-    use chrono::Utc;
+    use jiff::Timestamp;
 
     use super::*;
 
@@ -98,7 +98,7 @@ mod tests {
         let gcloud = GCloudAuthorizedUser::new().await.unwrap();
         println!("{:?}", gcloud.project_id);
         if let Ok(t) = gcloud.token(&[""]).await {
-            let expires = Utc::now() + DEFAULT_TOKEN_DURATION;
+            let expires = Timestamp::now() + DEFAULT_TOKEN_DURATION;
             println!("{:?}", t);
             assert!(!t.has_expired());
             assert!(t.expires_at() < expires + Duration::from_secs(1));
@@ -115,7 +115,7 @@ mod tests {
     fn test_token_from_string() {
         let s = String::from("abc123");
         let token = Token::from_string(s, DEFAULT_TOKEN_DURATION);
-        let expires = Utc::now() + DEFAULT_TOKEN_DURATION;
+        let expires = Timestamp::now() + DEFAULT_TOKEN_DURATION;
 
         assert_eq!(token.as_str(), "abc123");
         assert!(!token.has_expired());
