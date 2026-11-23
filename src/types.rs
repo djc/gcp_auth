@@ -9,13 +9,13 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use bytes::Buf;
-use chrono::{DateTime, Utc};
 use http_body_util::{BodyExt, Full};
 use hyper::body::Bytes;
 use hyper::Request;
 use hyper_rustls::HttpsConnectorBuilder;
 use hyper_util::client::legacy::Client;
 use hyper_util::rt::TokioExecutor;
+use jiff::Timestamp;
 use rustls::crypto::CryptoProvider;
 use serde::{Deserialize, Deserializer};
 use tokio::time::sleep;
@@ -160,14 +160,14 @@ pub struct Token {
         deserialize_with = "deserialize_time",
         rename(deserialize = "expires_in")
     )]
-    expires_at: DateTime<Utc>,
+    expires_at: Timestamp,
 }
 
 impl Token {
     pub(crate) fn from_string(access_token: String, expires_in: Duration) -> Self {
         Token {
             access_token,
-            expires_at: Utc::now() + expires_in,
+            expires_at: Timestamp::now() + expires_in,
         }
     }
 
@@ -182,7 +182,7 @@ impl Token {
     /// The docs state, the metadata server caches tokens until 5 minutes before expiry.
     /// We use 20s to be on the safe side.
     pub fn has_expired(&self) -> bool {
-        self.expires_at - Duration::from_secs(20) <= Utc::now()
+        self.expires_at - Duration::from_secs(20) <= Timestamp::now()
     }
 
     /// Get str representation of the token.
@@ -191,7 +191,7 @@ impl Token {
     }
 
     /// Get expiry of token, if available
-    pub fn expires_at(&self) -> DateTime<Utc> {
+    pub fn expires_at(&self) -> Timestamp {
         self.expires_at
     }
 }
@@ -275,12 +275,12 @@ mod sign {
     }
 }
 
-fn deserialize_time<'de, D>(deserializer: D) -> Result<DateTime<Utc>, D::Error>
+fn deserialize_time<'de, D>(deserializer: D) -> Result<Timestamp, D::Error>
 where
     D: Deserializer<'de>,
 {
     let seconds_from_now: u64 = Deserialize::deserialize(deserializer)?;
-    Ok(Utc::now() + Duration::from_secs(seconds_from_now))
+    Ok(Timestamp::now() + Duration::from_secs(seconds_from_now))
 }
 
 #[cfg(any(feature = "ring", feature = "aws-lc-rs"))]
@@ -379,7 +379,7 @@ mod tests {
     fn test_deserialize_with_time() {
         let s = r#"{"access_token":"abc123","expires_in":100}"#;
         let token: Token = serde_json::from_str(s).unwrap();
-        let expires = Utc::now() + Duration::from_secs(100);
+        let expires = Timestamp::now() + Duration::from_secs(100);
 
         assert_eq!(token.as_str(), "abc123");
 
